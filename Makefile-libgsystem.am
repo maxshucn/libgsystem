@@ -15,13 +15,17 @@
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 
+libgsystem_src_dir ?= src/libgsystem
+libgsystem_cflags ?= $(GIO_UNIX_CFLAGS)
+libgsystem_libs ?= $(GIO_UNIX_LIBS)
+
 noinst_LTLIBRARIES += libgsystem.la
 
 libgsystem_la_SOURCES = \
-	gsystem-local-alloc.h \
-	gsystem-local-alloc.c \
-	libgsystem.h \
+	$(libgsystem_src_dir)/gsystem-local-alloc.h \
+	$(libgsystem_src_dir)/gsystem-local-alloc.c \
+	$(libgsystem_src_dir)/libgsystem.h \
 	$(NULL)
 
-libgsystem_la_CFLAGS = $(AM_CFLAGS) $(GIO_UNIX_CFLAGS)
-libgsystem_la_LIBADD = $(GIO_UNIX_LIBS)
+libgsystem_la_CFLAGS = $(AM_CFLAGS) $(libgsystem_cflags)
+libgsystem_la_LIBADD = $(libgsystem_libs)
