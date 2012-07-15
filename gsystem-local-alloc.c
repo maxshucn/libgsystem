@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "gs-local-alloc.h"
+#include "gsystem-local-alloc.h"
 
 void
 gs_local_free (void *loc)
