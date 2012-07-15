@@ -5,10 +5,10 @@
          xmlns:gnome="http://api.gnome.org/doap-extensions#"
          xmlns="http://usefulinc.com/ns/doap#">
 
-  <name>libgdaemon</name>
-  <shortname>libgdaemon</shortname>
+  <name>libgsystem</name>
+  <shortname>libgsystem</shortname>
 
-  <shortdesc xml:lang="en">Shared library used by system daemons</shortdesc>
+  <shortdesc xml:lang="en">"Copylib" for system service modules using GLib with GCC</shortdesc>
 
   <description xml:lang="en">This module is intended for use by
   infrastructure daemons using GLib, such as NetworkManager/udisks as

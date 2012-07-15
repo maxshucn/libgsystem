@@ -18,24 +18,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __GD_LOCAL_ALLOC_H__
-#define __GD_LOCAL_ALLOC_H__
+#ifndef __LIBGSYSTEM__
+#define __LIBGSYSTEM__
 
 #include <gio/gio.h>
 
 G_BEGIN_DECLS
 
-void gd_local_free (void *loc);
-void gd_local_obj_unref (void *loc);
-void gd_local_variant_unref (void *loc);
-void gd_local_ptrarray_unref (void *loc);
-void gd_local_hashtable_unref (void *loc);
-
-#define gd_lfree __attribute__ ((cleanup(gd_local_free)))
-#define gd_lobj __attribute__ ((cleanup(gd_local_obj_unref)))
-#define gd_lvariant __attribute__ ((cleanup(gd_local_variant_unref)))
-#define gd_lptrarray __attribute__ ((cleanup(gd_local_ptrarray_unref)))
-#define gd_lhash __attribute__ ((cleanup(gd_local_hashtable_unref)))
+#include "gsystem-local-alloc.h"
 
 G_END_DECLS
 

@@ -15,13 +15,13 @@
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 
-noinst_LTLIBRARIES += libgdaemon.la
+noinst_LTLIBRARIES += libgsystem.la
 
-libgdaemon_la_SOURCES = \
-	gd-local-alloc.h \
-	gd-local-alloc.c \
-	libgdaemon.h \
+libgsystem_la_SOURCES = \
+	gsystem-local-alloc.h \
+	gsystem-local-alloc.c \
+	libgsystem.h \
 	$(NULL)
 
-libgdaemon_la_CFLAGS = $(AM_CFLAGS) $(GIO_UNIX_CFLAGS)
-libgdaemon_la_LIBADD = $(GIO_UNIX_LIBS)
+libgsystem_la_CFLAGS = $(AM_CFLAGS) $(GIO_UNIX_CFLAGS)
+libgsystem_la_LIBADD = $(GIO_UNIX_LIBS)

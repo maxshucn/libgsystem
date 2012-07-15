@@ -20,17 +20,17 @@
 
 #include "config.h"
 
-#include "gd-local-alloc.h"
+#include "gs-local-alloc.h"
 
 void
-gd_local_free (void *loc)
+gs_local_free (void *loc)
 {
   void **location = loc;
   if (location)
     g_free (*location);
 }
 
-#define _gd_local_free(type, function) do {           \
+#define _gs_local_free(type, function) do {           \
     void **location = loc;                            \
     if (location)                                     \
       {                                               \
@@ -41,25 +41,25 @@ gd_local_free (void *loc)
   } while (0)
 
 void
-gd_local_obj_unref (void *loc)
+gs_local_obj_unref (void *loc)
 {
-  _gd_local_free(GObject, g_object_unref);
+  _gs_local_free(GObject, g_object_unref);
 }
 
 void
-gd_local_variant_unref (void *loc)
+gs_local_variant_unref (void *loc)
 {
-  _gd_local_free(GVariant, g_variant_unref);
+  _gs_local_free(GVariant, g_variant_unref);
 }
 
 void
-gd_local_ptrarray_unref (void *loc)
+gs_local_ptrarray_unref (void *loc)
 {
-  _gd_local_free(GPtrArray, g_ptr_array_unref);
+  _gs_local_free(GPtrArray, g_ptr_array_unref);
 }
 
 void
-gd_local_hashtable_unref (void *loc)
+gs_local_hashtable_unref (void *loc)
 {
-  _gd_local_free(GHashTable, g_hash_table_unref);
+  _gs_local_free(GHashTable, g_hash_table_unref);
 }
