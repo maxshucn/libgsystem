@@ -18,15 +18,16 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __LIBGSYSTEM__
-#define __LIBGSYSTEM__
+#ifndef __GSYSTEM_FILE_UTILS_H__
+#define __GSYSTEM_FILE_UTILS_H__
 
 #include <gio/gio.h>
 
 G_BEGIN_DECLS
 
-#include <gsystem-local-alloc.h>
-#include <gsystem-file-utils.h>
+GInputStream *gs_file_read_noatime (GFile         *path,
+                                    GCancellable  *cancellable,
+                                    GError       **error);
 
 G_END_DECLS
 
