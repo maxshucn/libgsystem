@@ -21,7 +21,10 @@
 
 #include "config.h"
 
-#include "gsystem-file-utils.h"
+#include "libgsystem.h"
+#include <glib/gstdio.h>
+#include <gio/gunixinputstream.h>
+#include <glib-unix.h>
  
 static int
 _open_fd_noatime (const char *path)
@@ -67,10 +70,11 @@ gs_file_read_noatime (GFile         *file,
   if (path == NULL)
     return NULL;
 
-  fd = _open_fd (path);
+  fd = _open_fd_noatime (path);
   if (fd < 0)
     {
-      g_set_error (error, G_FILE_ERROR, g_file_error_from_errno (errno));
+      g_set_error (error, G_FILE_ERROR, g_file_error_from_errno (errno),
+                   "%s", g_strerror (errno));
       return NULL;
     }
 
