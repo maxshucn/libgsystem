@@ -21,6 +21,8 @@
 
 #include "config.h"
 
+#define _GNU_SOURCE
+
 #include "libgsystem.h"
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
