@@ -17,6 +17,8 @@
 
 noinst_LTLIBRARIES += libgsystem.la
 
+EXTRA_DIST += $(libgsystem_srcpath)/README $(libgsystem_srcpath)/COPYING
+
 libgsystem_la_SOURCES = \
 	$(libgsystem_srcpath)/gsystem-local-alloc.h \
 	$(libgsystem_srcpath)/gsystem-local-alloc.c \
