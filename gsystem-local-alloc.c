@@ -22,6 +22,54 @@
 
 #include "gsystem-local-alloc.h"
 
+/**
+ * SECTION:gslocalalloc
+ * @title: GSystem local allocation
+ * @short_description: Release local variables automatically when they go out of scope
+ *
+ * These macros leverage the GCC extension __attribute__ ((cleanup))
+ * to allow calling a cleanup function such as g_free() when a
+ * variable goes out of scope.  See <ulink
+ * url="http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html">
+ * for more information on the attribute.
+ *
+ * The provided macros make it easy to use the cleanup attribute for types
+ * that come with GLib.  The primary two are #gs_lfree and #gs_lobj,
+ * which correspond to g_free() and g_object_unref(), respectively.
+ *
+ * The rationale behind this is that particularly when handling error
+ * paths, it can be very tricky to ensure the right variables are
+ * freed.  With this, one simply applies gs_lobj to a
+ * locally-allocated #GFile for example, and it will be automatically
+ * unreferenced when it goes out of scope.
+ *
+ * Note - you should only use these macros for <emphasis>stack
+ * allocated</emphasis> variables.  They don't provide garbage
+ * collection or let you avoid freeing things.  They're simply a
+ * compiler assisted deterministic mechanism for calling a cleanup
+ * function when a stack frame ends.
+ *
+ * <example id="gs-lfree"><title>Calling g_free automatically</title>
+ * <programlisting>
+ *
+ * GFile *
+ * create_file (GError **error)
+ * {
+ *   gs_lfree char *random_id = NULL;
+ *
+ *   if (!prepare_file (error))
+ *     return NULL;
+ *
+ *   random_id = alloc_random_id ();
+ *
+ *   return create_file_real (error);
+ *   // Note that random_id is freed here automatically
+ * }
+ * </programlisting>
+ * </example>
+ *   
+ */
+
 void
 gs_local_free (void *loc)
 {
