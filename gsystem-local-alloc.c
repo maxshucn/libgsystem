@@ -67,7 +67,7 @@
  * }
  * </programlisting>
  * </example>
- *   
+ *
  */
 
 void
@@ -98,6 +98,12 @@ void
 gs_local_variant_unref (void *loc)
 {
   _gs_local_free(GVariant, g_variant_unref);
+}
+
+void
+gs_local_variant_iter_free (void *loc)
+{
+  _gs_local_free(GVariantIter, g_variant_iter_free);
 }
 
 void

@@ -33,6 +33,7 @@ G_BEGIN_DECLS
 void gs_local_free (void *loc);
 void gs_local_obj_unref (void *loc);
 void gs_local_variant_unref (void *loc);
+void gs_local_variant_iter_free (void *loc);
 void gs_local_ptrarray_unref (void *loc);
 void gs_local_hashtable_unref (void *loc);
 
@@ -60,6 +61,14 @@ void gs_local_hashtable_unref (void *loc);
  * %NULL.
  */
 #define gs_lvariant __attribute__ ((cleanup(gs_local_variant_unref)))
+
+/**
+ * gs_lvariant_iter:
+ *
+ * Call g_variant_iter_free() on a variable location when it goes out of
+ * scope.
+ */
+#define gs_lvariant_iter __attribute__ ((cleanup(gs_local_variant_iter_free)))
 
 /**
  * gs_lptrarray:
