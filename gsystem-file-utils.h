@@ -42,6 +42,12 @@ gboolean gs_file_unlink (GFile          *path,
                          GCancellable   *cancellable,
                          GError        **error);
 
+gboolean gs_file_ensure_directory (GFile          *dir,
+                                   gboolean        with_parents,
+                                   GCancellable   *cancellable,
+                                   GError        **error);
+
+
 G_END_DECLS
 
 #endif

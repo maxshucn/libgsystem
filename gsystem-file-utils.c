@@ -188,3 +188,54 @@ gs_file_unlink (GFile          *path,
     }
   return TRUE;
 }
+
+/**
+ * gs_file_ensure_directory:
+ * @dir: Path to create as directory
+ * @with_parents: Also create parent directories
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Like g_file_make_directory(), except does not throw an error if the
+ * directory already exists.
+ */
+gboolean
+gs_file_ensure_directory (GFile         *dir,
+                          gboolean       with_parents, 
+                          GCancellable  *cancellable,
+                          GError       **error)
+{
+  gboolean ret = FALSE;
+  GError *temp_error = NULL;
+
+  if (!g_file_make_directory (dir, cancellable, &temp_error))
+    {
+      if (with_parents &&
+          g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+        {
+          gs_lobj GFile *parent = NULL;
+
+          g_clear_error (&temp_error);
+
+          parent = g_file_get_parent (dir);
+          if (parent)
+            {
+              if (!gs_file_ensure_directory (parent, TRUE, cancellable, error))
+                goto out;
+            }
+          if (!gs_file_ensure_directory (dir, FALSE, cancellable, error))
+            goto out;
+        }
+      else if (!g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_EXISTS))
+        {
+          g_propagate_error (error, temp_error);
+          goto out;
+        }
+      else
+        g_clear_error (&temp_error);
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+}
