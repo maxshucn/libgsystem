@@ -239,3 +239,44 @@ gs_file_ensure_directory (GFile         *dir,
  out:
   return ret;
 }
+
+/**
+ * gs_file_load_contents_utf8:
+ * @file: Path to file whose contents must be UTF-8
+ * @cancellable:
+ * @error:
+ *
+ * Like g_file_load_contents(), except validates the contents are
+ * UTF-8.
+ */
+gchar *
+gs_file_load_contents_utf8 (GFile         *file,
+                            GCancellable  *cancellable,
+                            GError       **error)
+{
+  gboolean ret = FALSE;
+  gsize len;
+  char *ret_contents = NULL;
+
+  if (!g_file_load_contents (file, cancellable, &ret_contents, &len,
+                             NULL, error))
+    goto out;
+  if (!g_utf8_validate (ret_contents, len, NULL))
+    {
+      g_set_error (error,
+                   G_IO_ERROR,
+                   G_IO_ERROR_INVALID_DATA,
+                   "Invalid UTF-8");
+      goto out;
+    }
+
+  ret = TRUE;
+ out:
+  if (!ret)
+    {
+      g_free (ret_contents);
+      return NULL;
+    }
+  return ret_contents;
+}
+

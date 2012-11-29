@@ -47,6 +47,10 @@ gboolean gs_file_ensure_directory (GFile          *dir,
                                    GCancellable   *cancellable,
                                    GError        **error);
 
+gchar *gs_file_load_contents_utf8 (GFile         *file,
+                                   GCancellable  *cancellable,
+                                   GError       **error);
+
 
 G_END_DECLS
 
