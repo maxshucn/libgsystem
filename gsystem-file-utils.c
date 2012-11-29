@@ -84,3 +84,107 @@ gs_file_read_noatime (GFile         *file,
 
   return g_unix_input_stream_new (fd, TRUE);
 }
+
+/**
+ * gs_file_get_path_cached:
+ *
+ * Like g_file_get_path(), but returns a constant copy so callers
+ * don't need to free the result.
+ */
+const char *
+gs_file_get_path_cached (GFile *file)
+{
+  const char *path;
+
+  path = g_object_get_data ((GObject*)file, "gs-file-path");
+  if (!path)
+    {
+      path = g_file_get_path (file);
+      g_assert (path != NULL);
+      g_object_set_data_full ((GObject*)file, "gs-file-path", (char*)path, (GDestroyNotify)g_free);
+    }
+  return path;
+}
+
+/**
+ * gs_file_get_basename_cached:
+ *
+ * Like g_file_get_basename(), but returns a constant copy so callers
+ * don't need to free the result.
+ */
+const char *
+gs_file_get_basename_cached (GFile *file)
+{
+  const char *name;
+
+  name = g_object_get_data ((GObject*)file, "gs-file-name");
+  if (!name)
+    {
+      name = g_file_get_basename (file);
+      g_object_set_data_full ((GObject*)file, "gs-file-name", (char*)name, (GDestroyNotify)g_free);
+    }
+  return name;
+}
+
+/**
+ * gs_file_rename:
+ * @from: Current path
+ * @to: New path
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * This function wraps the raw Unix function rename().
+ *
+ * Returns: %TRUE on success, %FALSE on error
+ */
+gboolean
+gs_file_rename (GFile          *from,
+                GFile          *to,
+                GCancellable   *cancellable,
+                GError        **error)
+{
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  if (rename (gs_file_get_path_cached (from),
+              gs_file_get_path_cached (to)) < 0)
+    {
+      int errsv = errno;
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                   "Failed to rename %s to %s: ", gs_file_get_path_cached (from),
+                   gs_file_get_path_cached (to));
+      return FALSE;
+    }
+  return TRUE;
+}
+
+/**
+ * gs_file_unlink:
+ * @path: Path to file
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Like g_file_delete(), except this function does not follow Unix
+ * symbolic links, and will delete a symbolic link even if it's
+ * pointing to a nonexistent file.  In other words, this function
+ * merely wraps the raw Unix function unlink().
+ *
+ * Returns: %TRUE on success, %FALSE on error
+ */
+gboolean
+gs_file_unlink (GFile          *path,
+                GCancellable   *cancellable,
+                GError        **error)
+{
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  if (unlink (gs_file_get_path_cached (path)) < 0)
+    {
+      int errsv = errno;
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                   "Failed to unlink %s: ", gs_file_get_path_cached (path));
+      return FALSE;
+    }
+  return TRUE;
+}
