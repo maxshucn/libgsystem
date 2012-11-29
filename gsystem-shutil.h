@@ -18,16 +18,29 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __LIBGSYSTEM__
-#define __LIBGSYSTEM__
+#ifndef __GSYSTEM_SHUTIL_H__
+#define __GSYSTEM_SHUTIL_H__
 
 #include <gio/gio.h>
 
 G_BEGIN_DECLS
 
-#include <gsystem-local-alloc.h>
-#include <gsystem-file-utils.h>
-#include <gsystem-shutil.h>
+gboolean
+gs_shutil_cp_al_or_fallback (GFile         *src,
+                             GFile         *dest,
+                             GCancellable  *cancellable,
+                             GError       **error);
+
+gboolean
+gs_shutil_cp_a (GFile         *src,
+                GFile         *dest,
+                GCancellable  *cancellable,
+                GError       **error);
+
+gboolean
+gs_shutil_rm_rf (GFile        *path,
+                 GCancellable *cancellable,
+                 GError      **error);
 
 G_END_DECLS
 
