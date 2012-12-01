@@ -24,6 +24,11 @@ libgsystem_la_SOURCES = \
 	$(libgsystem_srcpath)/gsystem-file-utils.c \
 	$(libgsystem_srcpath)/gsystem-shutil.h \
 	$(libgsystem_srcpath)/gsystem-shutil.c \
+	$(libgsystem_srcpath)/gsystem-subprocess-context.h \
+	$(libgsystem_srcpath)/gsystem-subprocess-context-private.h \
+	$(libgsystem_srcpath)/gsystem-subprocess-context.c \
+	$(libgsystem_srcpath)/gsystem-subprocess.h \
+	$(libgsystem_srcpath)/gsystem-subprocess.c \
 	$(libgsystem_srcpath)/libgsystem.h \
 	$(NULL)
 libgsystem_la_CFLAGS = $(AM_CFLAGS) $(libgsystem_cflags)
