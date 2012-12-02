@@ -86,6 +86,49 @@ gs_file_read_noatime (GFile         *file,
 }
 
 /**
+ * gs_file_map_noatime:
+ * @file: a #GFile
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Like g_mapped_file_new(), but try to avoid updating the file's
+ * access time.  This should be used by background scanning
+ * components such as search indexers, antivirus programs, etc.
+ *
+ * Returns: (transfer full): A new mapped file, or %NULL on error
+ */
+GMappedFile *
+gs_file_map_noatime (GFile         *file,
+                     GCancellable  *cancellable,
+                     GError       **error)
+{
+  const char *path;
+  int fd;
+  GMappedFile *ret;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return NULL;
+
+  path = gs_file_get_path_cached (file);
+  if (path == NULL)
+    return NULL;
+
+  fd = _open_fd_noatime (path);
+  if (fd < 0)
+    {
+      int errsv = errno;
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errno),
+                   "%s", g_strerror (errsv));
+      return NULL;
+    }
+  
+  ret = g_mapped_file_new_from_fd (fd, FALSE, error);
+  (void) close (fd); /* Ignore errors - we always want to close */
+
+  return ret;
+}
+
+/**
  * gs_file_get_path_cached:
  *
  * Like g_file_get_path(), but returns a constant copy so callers
