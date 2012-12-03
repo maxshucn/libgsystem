@@ -41,7 +41,7 @@ cp_internal (GFile         *src,
   gs_lobj GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
-  enumerator = g_file_enumerate_children (src, "standard::type,standard::name",
+  enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::mode",
                                           G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
                                           cancellable, error);
   if (!enumerator)
