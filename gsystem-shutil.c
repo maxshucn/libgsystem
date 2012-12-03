@@ -37,8 +37,8 @@ cp_internal (GFile         *src,
              GError       **error)
 {
   gboolean ret = FALSE;
-  gs_lobj GFileEnumerator *enumerator = NULL;
-  gs_lobj GFileInfo *file_info = NULL;
+  gs_unref_object GFileEnumerator *enumerator = NULL;
+  gs_unref_object GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
   enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::mode",
@@ -53,8 +53,8 @@ cp_internal (GFile         *src,
   while ((file_info = g_file_enumerator_next_file (enumerator, cancellable, &temp_error)) != NULL)
     {
       const char *name = g_file_info_get_name (file_info);
-      gs_lobj GFile *src_child = g_file_get_child (src, name);
-      gs_lobj GFile *dest_child = g_file_get_child (dest, name);
+      gs_unref_object GFile *src_child = g_file_get_child (src, name);
+      gs_unref_object GFile *dest_child = g_file_get_child (dest, name);
 
       if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
         {
@@ -180,8 +180,8 @@ gs_shutil_rm_rf (GFile        *path,
                  GError      **error)
 {
   gboolean ret = FALSE;
-  gs_lobj GFileEnumerator *dir_enum = NULL;
-  gs_lobj GFileInfo *file_info = NULL;
+  gs_unref_object GFileEnumerator *dir_enum = NULL;
+  gs_unref_object GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
   dir_enum = g_file_enumerate_children (path, "standard::type,standard::name", 
@@ -202,7 +202,7 @@ gs_shutil_rm_rf (GFile        *path,
 
   while ((file_info = g_file_enumerator_next_file (dir_enum, cancellable, &temp_error)) != NULL)
     {
-      gs_lobj GFile *subpath = NULL;
+      gs_unref_object GFile *subpath = NULL;
       GFileType type;
       const char *name;
 

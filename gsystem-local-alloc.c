@@ -33,9 +33,10 @@
  * url="http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html">
  * for more information on the attribute.
  *
- * The provided macros make it easy to use the cleanup attribute for types
- * that come with GLib.  The primary two are #gs_lfree and #gs_lobj,
- * which correspond to g_free() and g_object_unref(), respectively.
+ * The provided macros make it easy to use the cleanup attribute for
+ * types that come with GLib.  The primary two are #gs_free and
+ * #gs_unref_object, which correspond to g_free() and
+ * g_object_unref(), respectively.
  *
  * The rationale behind this is that particularly when handling error
  * paths, it can be very tricky to ensure the right variables are
@@ -55,7 +56,7 @@
  * GFile *
  * create_file (GError **error)
  * {
- *   gs_lfree char *random_id = NULL;
+ *   gs_free char *random_id = NULL;
  *
  *   if (!prepare_file (error))
  *     return NULL;

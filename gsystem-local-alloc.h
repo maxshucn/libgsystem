@@ -38,56 +38,56 @@ void gs_local_ptrarray_unref (void *loc);
 void gs_local_hashtable_unref (void *loc);
 
 /**
- * gs_lfree:
+ * gs_free:
  *
  * Call g_free() on a variable location when it goes out of scope.
  */
-#define gs_lfree __attribute__ ((cleanup(gs_local_free)))
+#define gs_free __attribute__ ((cleanup(gs_local_free)))
 
 /**
- * gs_lobj:
+ * gs_unref_object:
  *
  * Call g_object_unref() on a variable location when it goes out of
  * scope.  Note that unlike g_object_unref(), the variable may be
  * %NULL.
  */
-#define gs_lobj __attribute__ ((cleanup(gs_local_obj_unref)))
+#define gs_unref_object __attribute__ ((cleanup(gs_local_obj_unref)))
 
 /**
- * gs_lvariant:
+ * gs_unref_variant:
  *
  * Call g_variant_unref() on a variable location when it goes out of
  * scope.  Note that unlike g_variant_unref(), the variable may be
  * %NULL.
  */
-#define gs_lvariant __attribute__ ((cleanup(gs_local_variant_unref)))
+#define gs_unref_variant __attribute__ ((cleanup(gs_local_variant_unref)))
 
 /**
- * gs_lvariant_iter:
+ * gs_free_variant_iter:
  *
  * Call g_variant_iter_free() on a variable location when it goes out of
  * scope.
  */
-#define gs_lvariant_iter __attribute__ ((cleanup(gs_local_variant_iter_free)))
+#define gs_free_variant_iter __attribute__ ((cleanup(gs_local_variant_iter_free)))
 
 /**
- * gs_lptrarray:
+ * gs_unref_ptrarray:
  *
  * Call g_ptr_array_unref() on a variable location when it goes out of
  * scope.  Note that unlike g_ptr_array_unref(), the variable may be
  * %NULL.
 
  */
-#define gs_lptrarray __attribute__ ((cleanup(gs_local_ptrarray_unref)))
+#define gs_unref_ptrarray __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 
 /**
- * gs_lhash:
+ * gs_unref_hashtable:
  *
  * Call g_hash_table_unref() on a variable location when it goes out
  * of scope.  Note that unlike g_hash_table_unref(), the variable may
  * be %NULL.
  */
-#define gs_lhash __attribute__ ((cleanup(gs_local_hashtable_unref)))
+#define gs_unref_hashtable __attribute__ ((cleanup(gs_local_hashtable_unref)))
 
 G_END_DECLS
 

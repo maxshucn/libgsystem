@@ -64,7 +64,7 @@ gs_file_read_noatime (GFile         *file,
                       GCancellable  *cancellable,
                       GError       **error)
 {
-  gs_lfree char *path = NULL;
+  gs_free char *path = NULL;
   int fd;
 
   if (g_cancellable_set_error_if_cancelled (cancellable, error))
@@ -256,7 +256,7 @@ gs_file_ensure_directory (GFile         *dir,
       if (with_parents &&
           g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
         {
-          gs_lobj GFile *parent = NULL;
+          gs_unref_object GFile *parent = NULL;
 
           g_clear_error (&temp_error);
 
