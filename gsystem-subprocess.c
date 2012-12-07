@@ -845,6 +845,16 @@ gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition stdout_disposition,
   return result;
 }
 
+/**
+ * gs_subprocess_new_simple_argv:
+ * @argv: (array zero-terminated=1) (element-type utf8): Argument array
+ * @stdout_disposition: Where to redirect stdout
+ * @stderr_disposition: Where to redirect stdout
+ * @error: a #GError
+ *
+ * Create a new subprocess using the provided argument array and
+ * stream dispositions.
+ */
 GSSubprocess *
 gs_subprocess_new_simple_argv (gchar                      **argv,
 			      GSSubprocessStreamDisposition stdout_disposition,
