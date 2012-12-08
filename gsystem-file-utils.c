@@ -86,7 +86,7 @@ gs_file_read_noatime (GFile         *file,
 }
 
 /**
- * gs_file_map_noatime:
+ * gs_file_map_noatime: (skip)
  * @file: a #GFile
  * @cancellable: a #GCancellable
  * @error: a #GError

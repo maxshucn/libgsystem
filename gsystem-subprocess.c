@@ -502,6 +502,11 @@ gs_subprocess_get_pid (GSSubprocess     *self)
   return self->pid;
 }
 
+/**
+ * gs_subprocess_get_stdin_pipe:
+ *
+ * Returns: (transfer full): Pipe
+ */
 GOutputStream *
 gs_subprocess_get_stdin_pipe (GSSubprocess       *self)
 {
@@ -511,6 +516,11 @@ gs_subprocess_get_stdin_pipe (GSSubprocess       *self)
   return self->stdin_pipe;
 }
 
+/**
+ * gs_subprocess_get_stdout_pipe:
+ *
+ * Returns: (transfer full): Pipe
+ */
 GInputStream *
 gs_subprocess_get_stdout_pipe (GSSubprocess      *self)
 {
@@ -520,6 +530,11 @@ gs_subprocess_get_stdout_pipe (GSSubprocess      *self)
   return self->stdout_pipe;
 }
 
+/**
+ * gs_subprocess_get_stderr_pipe:
+ *
+ * Returns: (transfer full): Pipe
+ */
 GInputStream *
 gs_subprocess_get_stderr_pipe (GSSubprocess      *self)
 {

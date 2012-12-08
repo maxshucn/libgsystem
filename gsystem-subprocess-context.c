@@ -23,7 +23,7 @@
 #include "libgsystem.h"
 
 /**
- * SECTION:gssubprocess
+ * SECTION:gssubprocesscontext
  * @title: GSSubprocess Context
  * @short_description: Environment options for launching a child process
  *
@@ -85,6 +85,13 @@ gs_subprocess_context_newv (const gchar  *first_arg,
   return result;
 }
 
+/**
+ * gs_subprocess_context_newa:
+ * @first_arg: First argument
+ * @args: a va_list
+ *
+ * Returns: (transfer full): A new instance of a #GSSubprocessContext.
+ */
 GSSubprocessContext *
 gs_subprocess_context_newa (const gchar *first_arg,
                            va_list      args)
@@ -340,6 +347,14 @@ gs_subprocess_context_set_stderr_fd        (GSSubprocessContext           *self,
 #endif
 
 #ifdef G_OS_UNIX
+/**
+ * gs_subprocess_context_set_child_setup: (skip)
+ * @self:
+ * @child_setup: Function to call in the newly forked child, before execve()
+ * @user_data: Data passed to child
+ *
+ * FIXME - note extensive restricitons on GSpawnChildSetupFunc here
+ */
 void
 gs_subprocess_context_set_child_setup (GSSubprocessContext           *self,
 				      GSpawnChildSetupFunc          child_setup,

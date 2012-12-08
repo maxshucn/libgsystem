@@ -29,15 +29,15 @@ const char *gs_file_get_path_cached (GFile *file);
 
 const char *gs_file_get_basename_cached (GFile *file);
 
-GInputStream *gs_file_read_noatime (GFile         *path,
+GInputStream *gs_file_read_noatime (GFile         *file,
                                     GCancellable  *cancellable,
                                     GError       **error);
-GMappedFile *gs_file_map_noatime (GFile         *path,
+GMappedFile *gs_file_map_noatime (GFile         *file,
                                   GCancellable  *cancellable,
                                   GError       **error);
 
-gboolean gs_file_rename (GFile          *src,
-                         GFile          *dest,
+gboolean gs_file_rename (GFile          *from,
+                         GFile          *to,
                          GCancellable   *cancellable,
                          GError        **error);
 
