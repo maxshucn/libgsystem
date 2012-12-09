@@ -284,6 +284,35 @@ gs_file_ensure_directory (GFile         *dir,
 }
 
 /**
+ * gs_file_ensure_directory_mode:
+ * @dir: Path to create as directory
+ * @mode: Create directory with these permissions
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Wraps UNIX mkdir() function with support for @cancellable, and
+ * uses @error instead of errno.
+ */
+gboolean
+gs_file_ensure_directory_mode (GFile         *dir,
+                               guint          mode,
+                               GCancellable  *cancellable,
+                               GError       **error)
+{
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  if (mkdir (gs_file_get_path_cached (dir), mode) == -1 && errno != EEXIST)
+    {
+      int errsv = errno;
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                   "Failed to create %s: ", gs_file_get_path_cached (dir));
+      return FALSE;
+    }
+  return TRUE;
+}
+
+/**
  * gs_file_load_contents_utf8:
  * @file: Path to file whose contents must be UTF-8
  * @cancellable:
