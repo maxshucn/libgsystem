@@ -129,6 +129,37 @@ gs_file_map_noatime (GFile         *file,
 }
 
 /**
+ * gs_file_map_readonly:
+ * @file: a #GFile
+ * @cancellable:
+ * @error:
+ *
+ * Return a #GBytes which references a readonly view of the contents of
+ * @file.  This function uses #GMappedFile internally.
+ *
+ * Returns: (transfer full): a newly referenced #GBytes
+ */
+GBytes *
+gs_file_map_readonly (GFile         *file,
+                      GCancellable  *cancellable,
+                      GError       **error)
+{
+  GMappedFile *mfile;
+  GBytes *ret;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return NULL;
+
+  mfile = g_mapped_file_new (gs_file_get_path_cached (file), FALSE, error);
+  if (!mfile)
+    return NULL;
+
+  ret = g_mapped_file_get_bytes (mfile);
+  g_mapped_file_unref (mfile);
+  return ret;
+}
+
+/**
  * gs_file_get_path_cached:
  *
  * Like g_file_get_path(), but returns a constant copy so callers
@@ -227,6 +258,36 @@ gs_file_unlink (GFile          *path,
       int errsv = errno;
       g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
                    "Failed to unlink %s: ", gs_file_get_path_cached (path));
+      return FALSE;
+    }
+  return TRUE;
+}
+
+/**
+ * gs_file_chmod:
+ * @path: Path to file
+ * @mode: UNIX mode
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Merely wraps UNIX chmod().
+ *
+ * Returns: %TRUE on success, %FALSE on error
+ */
+gboolean
+gs_file_chmod (GFile          *path,
+               guint           mode,
+               GCancellable   *cancellable,
+               GError        **error)
+{
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  if (chmod (gs_file_get_path_cached (path), mode) < 0)
+    {
+      int errsv = errno;
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                   "Failed to chmod %s: ", gs_file_get_path_cached (path));
       return FALSE;
     }
   return TRUE;

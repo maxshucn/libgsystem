@@ -36,6 +36,10 @@ GMappedFile *gs_file_map_noatime (GFile         *file,
                                   GCancellable  *cancellable,
                                   GError       **error);
 
+GBytes *gs_file_map_readonly (GFile         *file,
+                              GCancellable  *cancellable,
+                              GError       **error);
+
 gboolean gs_file_rename (GFile          *from,
                          GFile          *to,
                          GCancellable   *cancellable,
@@ -44,6 +48,11 @@ gboolean gs_file_rename (GFile          *from,
 gboolean gs_file_unlink (GFile          *path,
                          GCancellable   *cancellable,
                          GError        **error);
+
+gboolean gs_file_chmod (GFile          *path,
+                        guint           mode,
+                        GCancellable   *cancellable,
+                        GError        **error);
 
 gboolean gs_file_ensure_directory (GFile          *dir,
                                    gboolean        with_parents,
