@@ -237,6 +237,14 @@ gs_subprocess_context_class_init (GSSubprocessContextClass *class)
 
 /* Environment */
 
+/**
+ * gs_subprocess_context_set_environment:
+ * @self:
+ * @environ: (array zero-terminated=1) (element-type utf8): Environment KEY=VALUE pairs
+ *
+ * Replace the environment that will be used for the child process.
+ * The default is to inherit the current process.
+ */
 void
 gs_subprocess_context_set_environment (GSSubprocessContext           *self,
 				      gchar                       **environ)
