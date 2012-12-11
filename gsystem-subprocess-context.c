@@ -59,6 +59,12 @@ enum
 
 static GParamSpec *gs_subprocess_context_pspecs[N_PROPS];
 
+/**
+ * gs_subprocess_context_new:
+ * @argv: Argument list
+ *
+ * Returns: (transfer full): A new instance of a #GSSubprocessContext.
+ */
 GSSubprocessContext *
 gs_subprocess_context_new (gchar           **argv)
 {
