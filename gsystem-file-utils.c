@@ -169,13 +169,17 @@ const char *
 gs_file_get_path_cached (GFile *file)
 {
   const char *path;
+  static GQuark _file_path_quark = 0;
 
-  path = g_object_get_data ((GObject*)file, "gs-file-path");
+  if (G_UNLIKELY (_file_path_quark) == 0)
+    _file_path_quark = g_quark_from_static_string ("gsystem-file-path");
+
+  path = g_object_get_qdata ((GObject*)file, _file_path_quark);
   if (!path)
     {
       path = g_file_get_path (file);
       g_assert (path != NULL);
-      g_object_set_data_full ((GObject*)file, "gs-file-path", (char*)path, (GDestroyNotify)g_free);
+      g_object_set_qdata_full ((GObject*)file, _file_path_quark, (char*)path, (GDestroyNotify)g_free);
     }
   return path;
 }
@@ -190,12 +194,16 @@ const char *
 gs_file_get_basename_cached (GFile *file)
 {
   const char *name;
+  static GQuark _file_name_quark = 0;
 
-  name = g_object_get_data ((GObject*)file, "gs-file-name");
+  if (G_UNLIKELY (_file_name_quark) == 0)
+    _file_name_quark = g_quark_from_static_string ("gsystem-file-name");
+
+  name = g_object_get_qdata ((GObject*)file, _file_name_quark);
   if (!name)
     {
       name = g_file_get_basename (file);
-      g_object_set_data_full ((GObject*)file, "gs-file-name", (char*)name, (GDestroyNotify)g_free);
+      g_object_set_qdata_full ((GObject*)file, _file_name_quark, (char*)name, (GDestroyNotify)g_free);
     }
   return name;
 }
