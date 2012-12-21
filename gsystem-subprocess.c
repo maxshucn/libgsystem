@@ -462,10 +462,11 @@ initable_iface_init (GInitableIface *initable_iface)
  */
 GSSubprocess *
 gs_subprocess_new (GSSubprocessContext   *context,
-		  GError              **error)
+                   GCancellable          *cancellable,
+                   GError               **error)
 {
   return g_initable_new (GS_TYPE_SUBPROCESS,
-                         NULL, error,
+                         cancellable, error,
                          "context", context,
                          NULL);
 }
@@ -842,9 +843,10 @@ gs_subprocess_force_exit (GSSubprocess *self)
 
 GSSubprocess *
 gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition stdout_disposition,
-			      GSSubprocessStreamDisposition stderr_disposition,
-			      GError                     **error,
-			      const gchar                 *first_arg,
+			      GSSubprocessStreamDisposition  stderr_disposition,
+                               GCancellable                 *cancellable,
+			      GError                       **error,
+			      const gchar                   *first_arg,
 			      ...)
 {
   va_list args;
@@ -854,7 +856,7 @@ gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition stdout_disposition,
   va_start (args, first_arg);
   context = gs_subprocess_context_newa (first_arg, args);
   va_end (args);
-  result = gs_subprocess_new (context, error);
+  result = gs_subprocess_new (context, cancellable, error);
   g_object_unref (context);
   
   return result;
@@ -871,10 +873,11 @@ gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition stdout_disposition,
  * stream dispositions.
  */
 GSSubprocess *
-gs_subprocess_new_simple_argv (gchar                      **argv,
-			      GSSubprocessStreamDisposition stdout_disposition,
-			      GSSubprocessStreamDisposition stderr_disposition,
-			      GError                     **error)
+gs_subprocess_new_simple_argv (gchar                       **argv,
+			      GSSubprocessStreamDisposition  stdout_disposition,
+			      GSSubprocessStreamDisposition  stderr_disposition,
+                               GCancellable                 *cancellable,
+			      GError                      **error)
 {
   GSSubprocessContext *context;
   GSSubprocess *result;
@@ -883,7 +886,7 @@ gs_subprocess_new_simple_argv (gchar                      **argv,
   gs_subprocess_context_set_stdout_disposition (context, stdout_disposition);
   gs_subprocess_context_set_stderr_disposition (context, stderr_disposition);
 
-  result = gs_subprocess_new (context, error);
+  result = gs_subprocess_new (context, cancellable, error);
   g_object_unref (context);
 
   return result;

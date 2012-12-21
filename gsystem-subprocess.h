@@ -36,6 +36,7 @@ GType            gs_subprocess_get_type (void) G_GNUC_CONST;
 /**** Core API ****/
 
 GSSubprocess *    gs_subprocess_new (GSSubprocessContext   *context,
+                                     GCancellable          *cancellable,
                                      GError               **error);
 
 GOutputStream *  gs_subprocess_get_stdin_pipe (GSSubprocess       *self);
@@ -71,15 +72,17 @@ void             gs_subprocess_force_exit (GSSubprocess       *self);
 
 /** High level helpers **/
 
-GSSubprocess *    gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition stdout_disposition,
-					       GSSubprocessStreamDisposition stderr_disposition,
-					       GError                     **error,
-					       const char                  *first_arg,
-					       ...) G_GNUC_NULL_TERMINATED;
-GSSubprocess *    gs_subprocess_new_simple_argv (char                       **argv,
-					       GSSubprocessStreamDisposition stdout_disposition,
-					       GSSubprocessStreamDisposition stderr_disposition,
-					       GError                     **error);
+GSSubprocess *    gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition   stdout_disposition,
+                                                 GSSubprocessStreamDisposition   stderr_disposition,
+                                                 GCancellable                   *cancellable,
+                                                 GError                        **error,
+                                                 const char                     *first_arg,
+                                                 ...) G_GNUC_NULL_TERMINATED;
+GSSubprocess *    gs_subprocess_new_simple_argv (char                         **argv,
+                                                 GSSubprocessStreamDisposition  stdout_disposition,
+                                                 GSSubprocessStreamDisposition  stderr_disposition,
+                                                 GCancellable                  *cancellable,
+                                                 GError                       **error);
 
 G_END_DECLS
 
