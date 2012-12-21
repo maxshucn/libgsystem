@@ -891,3 +891,48 @@ gs_subprocess_new_simple_argv (gchar                       **argv,
 
   return result;
 }
+
+/**
+ * gs_subprocess_simple_run_sync:
+ * @cwd: Current working directory
+ * @stdin_disposition: What to do with standard input
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ * @first_arg: First argument
+ * @...: Remaining arguments, %NULL terminated
+ *
+ * Run a process synchronously, throw an error if it fails.
+ */
+gboolean
+gs_subprocess_simple_run_sync (const char                    *cwd,
+                               GSSubprocessStreamDisposition  stdin_disposition,
+                               GCancellable                  *cancellable,
+                               GError                       **error,
+                               const char                    *first_arg,
+                               ...)
+{
+  gboolean ret = FALSE;
+  va_list args;
+  GSSubprocess *proc = NULL;
+  GSSubprocessContext *context = NULL;
+
+  va_start (args, first_arg);
+  context = gs_subprocess_context_newa (first_arg, args);
+  va_end (args);
+  gs_subprocess_context_set_stdin_disposition (context, stdin_disposition);
+  gs_subprocess_context_set_cwd (context, cwd);
+  proc = gs_subprocess_new (context, cancellable, error);
+  if (!proc)
+    goto out;
+
+  if (!gs_subprocess_wait_sync_check (proc, cancellable, error))
+    goto out;
+
+  ret = TRUE;
+ out:
+  if (context)
+    g_object_unref (context);
+  if (proc)
+    g_object_unref (proc);
+  return ret;
+}

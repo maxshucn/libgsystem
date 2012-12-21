@@ -84,6 +84,13 @@ GSSubprocess *    gs_subprocess_new_simple_argv (char                         **
                                                  GCancellable                  *cancellable,
                                                  GError                       **error);
 
+gboolean          gs_subprocess_simple_run_sync (const char                    *cwd,
+                                                 GSSubprocessStreamDisposition  stdin_disposition,
+                                                 GCancellable                  *cancellable,
+                                                 GError                       **error,
+                                                 const char                    *first_arg,
+                                                 ...) G_GNUC_NULL_TERMINATED;
+
 G_END_DECLS
 
 #endif
