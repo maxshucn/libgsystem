@@ -29,7 +29,23 @@
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
 #include <glib-unix.h>
- 
+
+static int
+close_nointr (int fd)
+{
+  int res;
+  do
+    res = close (fd);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+  return res;
+}
+
+static void
+close_nointr_noerror (int fd)
+{
+  (void) close_nointr (fd);
+}
+
 static int
 _open_fd_noatime (const char *path)
 {
@@ -123,7 +139,7 @@ gs_file_map_noatime (GFile         *file,
     }
   
   ret = g_mapped_file_new_from_fd (fd, FALSE, error);
-  (void) close (fd); /* Ignore errors - we always want to close */
+  close_nointr_noerror (fd); /* Ignore errors - we always want to close */
 
   return ret;
 }
@@ -157,16 +173,6 @@ gs_file_map_readonly (GFile         *file,
   ret = g_mapped_file_get_bytes (mfile);
   g_mapped_file_unref (mfile);
   return ret;
-}
-
-static int
-close_nointr (int fd)
-{
-  int res;
-  do
-    res = close (fd);
-  while (G_UNLIKELY (res != 0 && errno == EINTR));
-  return res;
 }
 
 /**
@@ -220,7 +226,7 @@ gs_file_sync_data (GFile          *file,
   ret = TRUE;
  out:
   if (fd != -1)
-    (void) close_nointr (fd);
+    close_nointr_noerror (fd);
   return ret;
 }
 
