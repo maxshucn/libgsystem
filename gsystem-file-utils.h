@@ -40,6 +40,10 @@ GBytes *gs_file_map_readonly (GFile         *file,
                               GCancellable  *cancellable,
                               GError       **error);
 
+gboolean gs_file_sync_data (GFile          *file,
+                            GCancellable   *cancellable,
+                            GError        **error);
+
 gboolean gs_file_rename (GFile          *from,
                          GFile          *to,
                          GCancellable   *cancellable,

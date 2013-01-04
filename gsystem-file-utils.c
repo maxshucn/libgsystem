@@ -159,6 +159,71 @@ gs_file_map_readonly (GFile         *file,
   return ret;
 }
 
+static int
+close_nointr (int fd)
+{
+  int res;
+  do
+    res = close (fd);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+  return res;
+}
+
+/**
+ * gs_file_sync_data:
+ * @file: a #GFile
+ * @cancellable:
+ * @error:
+ *
+ * Wraps the UNIX fdatasync() function, which ensures that the data in
+ * @file is on non-volatile storage.
+ */
+gboolean
+gs_file_sync_data (GFile          *file,
+                   GCancellable   *cancellable,
+                   GError        **error)
+{
+  gboolean ret = FALSE;
+  int res;
+  int fd = -1; 
+
+  fd = _open_fd_noatime (gs_file_get_path_cached (file));
+  if (fd < 0)
+    {
+      int errsv = errno;
+      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
+                           g_strerror (errsv));
+      goto out;
+    }
+
+  do
+    res = fdatasync (fd);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+  if (res != 0)
+    {
+      int errsv = errno;
+      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
+                           g_strerror (errsv));
+      goto out;
+    }
+
+  res = close_nointr (fd);
+  if (res != 0)
+    {
+      int errsv = errno;
+      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
+                           g_strerror (errsv));
+      goto out;
+    }
+  fd = -1;
+  
+  ret = TRUE;
+ out:
+  if (fd != -1)
+    (void) close_nointr (fd);
+  return ret;
+}
+
 /**
  * gs_file_get_path_cached:
  *
