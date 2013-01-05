@@ -25,6 +25,8 @@
 #define _GNU_SOURCE
 #endif
 
+#include <string.h>
+
 #include "libgsystem.h"
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
@@ -227,6 +229,123 @@ gs_file_sync_data (GFile          *file,
  out:
   if (fd != -1)
     close_nointr_noerror (fd);
+  return ret;
+}
+
+static const char *
+get_default_tmp_prefix (void)
+{
+  static char *tmpprefix = NULL;
+
+  if (g_once_init_enter (&tmpprefix))
+    {
+      const char *prgname = g_get_prgname ();
+      const char *p;
+      char *prefix;
+
+      p = strrchr (prgname, '/');
+      if (p)
+        prgname = p + 1;
+
+      prefix = g_strdup_printf ("tmp-%s%u-", prgname, getuid ());
+      
+      g_once_init_leave (&tmpprefix, prefix);
+    }
+
+  return tmpprefix;
+}
+static char *
+gen_tmp_name (const char *prefix,
+              const char *suffix)
+{
+  static const char table[] = "ABCEDEFGHIJKLMNOPQRSTUVWXYZabcedefghijklmnopqrstuvwxyz0123456789";
+  GString *str = g_string_new ("");
+  guint i;
+
+  if (!prefix)
+    prefix = get_default_tmp_prefix ();
+  if (!suffix)
+    suffix = "tmp";
+
+  g_string_append (str, prefix);
+  for (i = 0; i < 8; i++)
+    {
+      int offset = g_random_int_range (0, sizeof (table) - 1);
+      g_string_append_c (str, (guint8)table[offset]);
+    }
+  g_string_append_c (str, '.');
+  g_string_append (str, suffix);
+
+  return g_string_free (str, FALSE);
+}
+
+/**
+ * gs_file_linkcopy_sync_data:
+ * @src: Source file
+ * @dest: Destination file
+ * @cancellable:
+ * @error:
+ *
+ * Copy the file @src to @dest, using gs_file_sync_data() to ensure
+ * that @dest is in stable storage.  As an optimization, this function
+ * will first try the UNIX link() call, but if the files are on
+ * separate devices, it will fall back to copying.
+ */
+gboolean
+gs_file_linkcopy_sync_data (GFile          *src,
+                            GFile          *dest,
+                            GCancellable   *cancellable,
+                            GError        **error)
+{
+  gboolean ret = FALSE;
+  int i;
+  gs_unref_object GFile *dest_parent = NULL;
+
+  dest_parent = g_file_get_parent (dest);
+
+  /* 128 attempts seems reasonable... */
+  for (i = 0; i < 128; i++)
+    {
+      int res;
+      gs_free char *tmp_name = NULL;
+      gs_unref_object GFile *tmp_dest = NULL;
+
+      tmp_name = gen_tmp_name (NULL, NULL);
+      tmp_dest = g_file_get_child (dest_parent, tmp_name);
+
+      res = link (gs_file_get_path_cached (src), gs_file_get_path_cached (tmp_dest));
+      if (res == -1)
+        {
+          if (errno == EEXIST)
+            continue;
+          else if (errno == EXDEV || errno == EMLINK || errno == EPERM)
+            {
+              if (!g_file_copy (src, tmp_dest,
+                                G_FILE_COPY_OVERWRITE | G_FILE_COPY_ALL_METADATA | G_FILE_COPY_NOFOLLOW_SYMLINKS,
+                                cancellable, NULL, NULL, error))
+                goto out;
+            }
+          else
+            {
+              int errsv = errno;
+              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
+                                   g_strerror (errsv));
+              goto out;
+            }
+        }
+      
+      /* Now, we need to fdatasync */
+      if (!gs_file_sync_data (tmp_dest, cancellable, error))
+        goto out;
+
+      if (!gs_file_rename (tmp_dest, dest, cancellable, error))
+        goto out;
+
+      break;
+    }
+
+  ret = TRUE;
+ out:
   return ret;
 }
 
