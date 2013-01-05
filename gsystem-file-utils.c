@@ -310,6 +310,9 @@ gs_file_linkcopy_sync_data (GFile          *src,
       gs_free char *tmp_name = NULL;
       gs_unref_object GFile *tmp_dest = NULL;
 
+      if (g_cancellable_set_error_if_cancelled (cancellable, error))
+        goto out;
+
       tmp_name = gen_tmp_name (NULL, NULL);
       tmp_dest = g_file_get_child (dest_parent, tmp_name);
 
