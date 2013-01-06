@@ -49,18 +49,28 @@ close_nointr_noerror (int fd)
 }
 
 static int
+open_nointr (const char *path, int flags, mode_t mode)
+{
+  int res;
+  do
+    res = open (path, flags, mode);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+  return res;
+}
+
+static int
 _open_fd_noatime (const char *path)
 {
   int fd;
 
 #ifdef O_NOATIME
-  fd = g_open (path, O_RDONLY | O_NOATIME, 0);
+  fd = open_nointr (path, O_RDONLY | O_NOATIME, 0);
   /* Only the owner or superuser may use O_NOATIME; so we may get
    * EPERM.  EINVAL may happen if the kernel is really old...
    */
   if (fd == -1 && (errno == EPERM || errno == EINVAL))
 #endif
-    fd = g_open (path, O_RDONLY, 0);
+    fd = open_nointr (path, O_RDONLY, 0);
   
   return fd;
 }
@@ -254,6 +264,7 @@ get_default_tmp_prefix (void)
 
   return tmpprefix;
 }
+
 static char *
 gen_tmp_name (const char *prefix,
               const char *suffix)
