@@ -44,8 +44,15 @@ gboolean gs_file_sync_data (GFile          *file,
                             GCancellable   *cancellable,
                             GError        **error);
 
+gboolean gs_file_linkcopy (GFile          *src,
+                           GFile          *dest,
+                           GFileCopyFlags  flags,
+                           GCancellable   *cancellable,
+                           GError        **error);
+
 gboolean gs_file_linkcopy_sync_data (GFile          *src,
                                      GFile          *dest,
+                                     GFileCopyFlags  flags,
                                      GCancellable   *cancellable,
                                      GError        **error);
 

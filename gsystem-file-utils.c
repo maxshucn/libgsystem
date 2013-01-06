@@ -290,30 +290,58 @@ gen_tmp_name (const char *prefix,
   return g_string_free (str, FALSE);
 }
 
-/**
- * gs_file_linkcopy_sync_data:
- * @src: Source file
- * @dest: Destination file
- * @cancellable:
- * @error:
- *
- * Copy the file @src to @dest, using gs_file_sync_data() to ensure
- * that @dest is in stable storage.  As an optimization, this function
- * will first try the UNIX link() call, but if the files are on
- * separate devices, it will fall back to copying.
- */
-gboolean
-gs_file_linkcopy_sync_data (GFile          *src,
-                            GFile          *dest,
-                            GCancellable   *cancellable,
-                            GError        **error)
+static gboolean
+linkcopy_internal (GFile          *src,
+                   GFile          *dest,
+                   GFileCopyFlags  flags,
+                   gboolean        sync_data,
+                   GCancellable   *cancellable,
+                   GError        **error)
 {
   gboolean ret = FALSE;
+  gboolean dest_exists;
   int i;
   gboolean enable_guestfs_fuse_workaround;
+  struct stat src_stat;
+  struct stat dest_stat;
   gs_unref_object GFile *dest_parent = NULL;
 
+  flags |= G_FILE_COPY_NOFOLLOW_SYMLINKS;
+
+  g_return_val_if_fail ((flags & (G_FILE_COPY_BACKUP | G_FILE_COPY_TARGET_DEFAULT_PERMS)) == 0, FALSE);
+
   dest_parent = g_file_get_parent (dest);
+
+  if (lstat (gs_file_get_path_cached (src), &dest_stat) == -1)
+    {
+      int errsv = errno;
+      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
+                           g_strerror (errsv));
+      goto out;
+    }
+
+  if (lstat (gs_file_get_path_cached (dest), &dest_stat) == -1)
+    dest_exists = FALSE;
+  else
+    dest_exists = TRUE;
+  
+  if (((flags & G_FILE_COPY_OVERWRITE) == 0) && dest_exists)
+    {
+      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_EXISTS,
+                           "File exists");
+      goto out;
+    }
+
+  /* Work around the behavior of link() where it's a no-op if src and
+   * dest are the same.
+   */
+  if (dest_exists &&
+      src_stat.st_dev == dest_stat.st_dev &&
+      src_stat.st_ino == dest_stat.st_ino)
+    {
+      ret = TRUE;
+      goto out;
+    }
 
   enable_guestfs_fuse_workaround = getenv ("LIBGSYSTEM_ENABLE_GUESTFS_FUSE_WORKAROUND") != NULL;
 
@@ -338,8 +366,7 @@ gs_file_linkcopy_sync_data (GFile          *src,
           else if (errno == EXDEV || errno == EMLINK || errno == EPERM
                    || (enable_guestfs_fuse_workaround && errno == ENOENT))
             {
-              if (!g_file_copy (src, tmp_dest,
-                                G_FILE_COPY_OVERWRITE | G_FILE_COPY_ALL_METADATA | G_FILE_COPY_NOFOLLOW_SYMLINKS,
+              if (!g_file_copy (src, tmp_dest, flags,
                                 cancellable, NULL, NULL, error))
                 goto out;
             }
@@ -352,9 +379,12 @@ gs_file_linkcopy_sync_data (GFile          *src,
             }
         }
       
-      /* Now, we need to fdatasync */
-      if (!gs_file_sync_data (tmp_dest, cancellable, error))
-        goto out;
+      if (sync_data)
+        {
+          /* Now, we need to fdatasync */
+          if (!gs_file_sync_data (tmp_dest, cancellable, error))
+            goto out;
+        }
 
       if (!gs_file_rename (tmp_dest, dest, cancellable, error))
         goto out;
@@ -365,6 +395,63 @@ gs_file_linkcopy_sync_data (GFile          *src,
   ret = TRUE;
  out:
   return ret;
+
+}
+
+/**
+ * gs_file_linkcopy:
+ * @src: Source file
+ * @dest: Destination file
+ * @flags: flags
+ * @cancellable:
+ * @error:
+ *
+ * First tries to use the UNIX link() call, but if the files are on
+ * separate devices, fall back to copying via g_file_copy().
+ *
+ * The given @flags have different semantics than those documented
+ * when hardlinking is used.  Specifically, both
+ * #G_FILE_COPY_TARGET_DEFAULT_PERMS and #G_FILE_COPY_BACKUP are not
+ * supported.  #G_FILE_COPY_NOFOLLOW_SYMLINKS treated as if it was
+ * always given - if you want to follow symbolic links, you will need
+ * to resolve them manually.
+ *
+ * Beware - do not use this function if @src may be modified, and it's
+ * undesirable for the changes to also be reflected in @dest.  The
+ * best use of this function is in the case where @src and @dest are
+ * read-only, or where @src is a temporary file, and you want to put
+ * it in the final place.
+ */
+gboolean
+gs_file_linkcopy (GFile          *src,
+                  GFile          *dest,
+                  GFileCopyFlags  flags,
+                  GCancellable   *cancellable,
+                  GError        **error)
+{
+  return linkcopy_internal (src, dest, flags, FALSE, cancellable, error);
+}
+
+/**
+ * gs_file_linkcopy_sync_data:
+ * @src: Source file
+ * @dest: Destination file
+ * @flags: flags
+ * @cancellable:
+ * @error:
+ *
+ * This function is similar to gs_file_linkcopy(), except it also uses
+ * gs_file_sync_data() to ensure that @dest is in stable storage
+ * before it is moved into place.
+ */
+gboolean
+gs_file_linkcopy_sync_data (GFile          *src,
+                            GFile          *dest,
+                            GFileCopyFlags  flags,
+                            GCancellable   *cancellable,
+                            GError        **error)
+{
+  return linkcopy_internal (src, dest, flags, TRUE, cancellable, error);
 }
 
 /**
