@@ -310,9 +310,12 @@ gs_file_linkcopy_sync_data (GFile          *src,
 {
   gboolean ret = FALSE;
   int i;
+  gboolean enable_guestfs_fuse_workaround;
   gs_unref_object GFile *dest_parent = NULL;
 
   dest_parent = g_file_get_parent (dest);
+
+  enable_guestfs_fuse_workaround = getenv ("LIBGSYSTEM_ENABLE_GUESTFS_FUSE_WORKAROUND") != NULL;
 
   /* 128 attempts seems reasonable... */
   for (i = 0; i < 128; i++)
@@ -332,7 +335,8 @@ gs_file_linkcopy_sync_data (GFile          *src,
         {
           if (errno == EEXIST)
             continue;
-          else if (errno == EXDEV || errno == EMLINK || errno == EPERM)
+          else if (errno == EXDEV || errno == EMLINK || errno == EPERM
+                   || (enable_guestfs_fuse_workaround && errno == ENOENT))
             {
               if (!g_file_copy (src, tmp_dest,
                                 G_FILE_COPY_OVERWRITE | G_FILE_COPY_ALL_METADATA | G_FILE_COPY_NOFOLLOW_SYMLINKS,
