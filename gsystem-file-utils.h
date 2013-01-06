@@ -58,6 +58,12 @@ gboolean gs_file_unlink (GFile          *path,
                          GCancellable   *cancellable,
                          GError        **error);
 
+gboolean gs_file_chown (GFile          *path,
+                        guint32         owner,
+                        guint32         group,
+                        GCancellable   *cancellable,
+                        GError        **error);
+
 gboolean gs_file_chmod (GFile          *path,
                         guint           mode,
                         GCancellable   *cancellable,

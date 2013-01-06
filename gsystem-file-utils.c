@@ -480,6 +480,48 @@ gs_file_unlink (GFile          *path,
 }
 
 /**
+ * gs_file_chown:
+ * @path: Path to file
+ * @owner: UNIX owner
+ * @group: UNIX group
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Merely wraps UNIX chown().
+ *
+ * Returns: %TRUE on success, %FALSE on error
+ */
+gboolean
+gs_file_chown (GFile          *path,
+               guint32         owner,
+               guint32         group,
+               GCancellable   *cancellable,
+               GError        **error)
+{
+  gboolean ret = FALSE;
+  int res;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  do
+    res = chown (gs_file_get_path_cached (path), owner, group);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+
+  if (res < 0)
+    {
+      int errsv = errno;
+      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                           g_strerror (errsv));
+      goto out;
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+/**
  * gs_file_chmod:
  * @path: Path to file
  * @mode: UNIX mode
@@ -496,17 +538,27 @@ gs_file_chmod (GFile          *path,
                GCancellable   *cancellable,
                GError        **error)
 {
+  gboolean ret = FALSE;
+  int res;
+
   if (g_cancellable_set_error_if_cancelled (cancellable, error))
     return FALSE;
 
-  if (chmod (gs_file_get_path_cached (path), mode) < 0)
+  do
+    res = chmod (gs_file_get_path_cached (path), mode);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+
+  if (res < 0)
     {
       int errsv = errno;
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                   "Failed to chmod %s: ", gs_file_get_path_cached (path));
-      return FALSE;
+      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                           g_strerror (errsv));
+      goto out;
     }
-  return TRUE;
+
+  ret = TRUE;
+ out:
+  return ret;
 }
 
 /**
