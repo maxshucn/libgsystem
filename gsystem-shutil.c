@@ -194,6 +194,13 @@ gs_shutil_rm_rf (GFile        *path,
           g_clear_error (&temp_error);
           ret = TRUE;
         }
+      else if (g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY))
+        {
+          g_clear_error (&temp_error);
+          if (!gs_file_unlink (path, cancellable, error))
+            goto out;
+          ret = TRUE;
+        }
       else
         g_propagate_error (error, temp_error);
 
