@@ -75,6 +75,14 @@ _open_fd_noatime (const char *path)
   return fd;
 }
 
+static inline void
+_set_error_from_errno (GError **error)
+{
+  int errsv = errno;
+  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                       g_strerror (errsv));
+}
+
 /**
  * gs_file_read_noatime:
  * @file: a #GFile
@@ -105,8 +113,7 @@ gs_file_read_noatime (GFile         *file,
   fd = _open_fd_noatime (path);
   if (fd < 0)
     {
-      g_set_error (error, G_FILE_ERROR, g_file_error_from_errno (errno),
-                   "%s", g_strerror (errno));
+      _set_error_from_errno (error);
       return NULL;
     }
 
@@ -144,9 +151,7 @@ gs_file_map_noatime (GFile         *file,
   fd = _open_fd_noatime (path);
   if (fd < 0)
     {
-      int errsv = errno;
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errno),
-                   "%s", g_strerror (errsv));
+      _set_error_from_errno (error);
       return NULL;
     }
   
@@ -208,9 +213,7 @@ gs_file_sync_data (GFile          *file,
   fd = _open_fd_noatime (gs_file_get_path_cached (file));
   if (fd < 0)
     {
-      int errsv = errno;
-      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
-                           g_strerror (errsv));
+      _set_error_from_errno (error);
       goto out;
     }
 
@@ -219,18 +222,14 @@ gs_file_sync_data (GFile          *file,
   while (G_UNLIKELY (res != 0 && errno == EINTR));
   if (res != 0)
     {
-      int errsv = errno;
-      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
-                           g_strerror (errsv));
+      _set_error_from_errno (error);
       goto out;
     }
 
   res = close_nointr (fd);
   if (res != 0)
     {
-      int errsv = errno;
-      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
-                           g_strerror (errsv));
+      _set_error_from_errno (error);
       goto out;
     }
   fd = -1;
@@ -372,9 +371,7 @@ linkcopy_internal (GFile          *src,
             }
           else
             {
-              int errsv = errno;
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
-                                   g_strerror (errsv));
+              _set_error_from_errno (error);
               goto out;
             }
         }
@@ -526,10 +523,7 @@ gs_file_rename (GFile          *from,
   if (rename (gs_file_get_path_cached (from),
               gs_file_get_path_cached (to)) < 0)
     {
-      int errsv = errno;
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                   "Failed to rename %s to %s: ", gs_file_get_path_cached (from),
-                   gs_file_get_path_cached (to));
+      _set_error_from_errno (error);
       return FALSE;
     }
   return TRUE;
@@ -558,9 +552,7 @@ gs_file_unlink (GFile          *path,
 
   if (unlink (gs_file_get_path_cached (path)) < 0)
     {
-      int errsv = errno;
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                   "Failed to unlink %s: ", gs_file_get_path_cached (path));
+      _set_error_from_errno (error);
       return FALSE;
     }
   return TRUE;
@@ -597,9 +589,7 @@ gs_file_chown (GFile          *path,
 
   if (res < 0)
     {
-      int errsv = errno;
-      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                           g_strerror (errsv));
+      _set_error_from_errno (error);
       goto out;
     }
 
@@ -637,9 +627,7 @@ gs_file_chmod (GFile          *path,
 
   if (res < 0)
     {
-      int errsv = errno;
-      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                           g_strerror (errsv));
+      _set_error_from_errno (error);
       goto out;
     }
 
@@ -720,9 +708,7 @@ gs_file_ensure_directory_mode (GFile         *dir,
 
   if (mkdir (gs_file_get_path_cached (dir), mode) == -1 && errno != EEXIST)
     {
-      int errsv = errno;
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                   "Failed to create %s: ", gs_file_get_path_cached (dir));
+      _set_error_from_errno (error);
       return FALSE;
     }
   return TRUE;
