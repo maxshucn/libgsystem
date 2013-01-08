@@ -311,7 +311,7 @@ linkcopy_internal (GFile          *src,
 
   dest_parent = g_file_get_parent (dest);
 
-  if (lstat (gs_file_get_path_cached (src), &dest_stat) == -1)
+  if (lstat (gs_file_get_path_cached (src), &src_stat) == -1)
     {
       int errsv = errno;
       g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
