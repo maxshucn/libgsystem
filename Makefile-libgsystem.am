@@ -31,6 +31,25 @@ libgsystem_la_SOURCES = \
 	$(libgsystem_srcpath)/gsystem-subprocess.c \
 	$(libgsystem_srcpath)/libgsystem.h \
 	$(NULL)
+
 libgsystem_la_CFLAGS = $(AM_CFLAGS) $(libgsystem_cflags)
 libgsystem_la_LDFLAGS = -avoid-version -Bsymbolic-functions -export-symbols-regex "^gs_" -no-undefined -export-dynamic
 libgsystem_la_LIBADD = $(libgsystem_libs)
+
+libgsystemlog_la_CFLAGS = $(libgsystem_la_CFLAGS)
+libgsystemlog_la_LDFLAGS = $(libgsystem_la_LDFLAGS)
+libgsystemlog_la_LIBADD = $(libgsystem_la_LIBADD)
+libgsystemlog_la_SOURCES = $(libgsystem_srcpath)/gsystem-log.h
+if HAVE_SYSTEMD_JOURNAL
+libgsystemlog_la_SOURCES += $(libgsystem_srcpath)/gsystem-log-systemd.c
+libgsystemlog_la_CFLAGS += $(SYSTEMD_JOURNAL_CFLAGS)
+libgsystemlog_la_LIBADD += $(SYSTEMD_JOURNAL_LIBS)
+else
+libgsystemlog_la_SOURCES += $(libgsystem_srcpath)/gsystem-log-syslog.c
+endif
+
+noinst_LTLIBRARIES += libgsystemlog.la
+noinst_PROGRAMS += libgsystem-testlog
+libgsystem_testlog_SOURCES = $(libgsystem_srcpath)/libgsystem-testlog.c
+libgsystem_testlog_CFLAGS = $(libgsystem_la_CFLAGS)
+libgsystem_testlog_LDADD = libgsystemlog.la $(libgsystem_libs)
