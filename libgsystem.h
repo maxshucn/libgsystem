@@ -25,7 +25,6 @@
 
 G_BEGIN_DECLS
 
-#include <gsystem-local-alloc.h>
 #include <gsystem-file-utils.h>
 #include <gsystem-shutil.h>
 #include <gsystem-subprocess.h>

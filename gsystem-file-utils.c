@@ -100,13 +100,13 @@ gs_file_read_noatime (GFile         *file,
                       GCancellable  *cancellable,
                       GError       **error)
 {
-  gs_free char *path = NULL;
+  const char *path = NULL;
   int fd;
 
   if (g_cancellable_set_error_if_cancelled (cancellable, error))
     return NULL;
 
-  path = g_file_get_path (file);
+  path = gs_file_get_path_cached (file);
   if (path == NULL)
     return NULL;
 
@@ -290,6 +290,71 @@ gen_tmp_name (const char *prefix,
 }
 
 static gboolean
+linkcopy_internal_attempt (GFile          *src,
+                          GFile          *dest,
+                          GFile          *dest_parent,
+                          GFileCopyFlags  flags,
+                          gboolean        sync_data,
+                          gboolean        enable_guestfs_fuse_workaround,
+                          gboolean       *out_try_again,
+                          GCancellable   *cancellable,
+                          GError        **error)
+{
+  gboolean ret = FALSE;
+  gboolean ret_try_again = FALSE;
+  int res;
+  char *tmp_name = NULL;
+  GFile *tmp_dest = NULL;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    goto out;
+
+  tmp_name = gen_tmp_name (NULL, NULL);
+  tmp_dest = g_file_get_child (dest_parent, tmp_name);
+
+  res = link (gs_file_get_path_cached (src), gs_file_get_path_cached (tmp_dest));
+  if (res == -1)
+    {
+      if (errno == EEXIST)
+        {
+          /* Nothing, fall through */
+          ret_try_again = TRUE;
+          ret = TRUE;
+          goto out;
+        }
+      else if (errno == EXDEV || errno == EMLINK || errno == EPERM
+               || (enable_guestfs_fuse_workaround && errno == ENOENT))
+        {
+          if (!g_file_copy (src, tmp_dest, flags,
+                            cancellable, NULL, NULL, error))
+            goto out;
+        }
+      else
+        {
+          _set_error_from_errno (error);
+          goto out;
+        }
+    }
+      
+  if (sync_data)
+    {
+      /* Now, we need to fdatasync */
+      if (!gs_file_sync_data (tmp_dest, cancellable, error))
+        goto out;
+    }
+
+  if (!gs_file_rename (tmp_dest, dest, cancellable, error))
+    goto out;
+
+  ret = TRUE;
+  *out_try_again = FALSE;
+ out:
+  g_clear_pointer (&tmp_name, g_free);
+  g_clear_object (&tmp_dest);
+  return ret;
+}
+
+static gboolean
 linkcopy_internal (GFile          *src,
                    GFile          *dest,
                    GFileCopyFlags  flags,
@@ -303,7 +368,7 @@ linkcopy_internal (GFile          *src,
   gboolean enable_guestfs_fuse_workaround;
   struct stat src_stat;
   struct stat dest_stat;
-  gs_unref_object GFile *dest_parent = NULL;
+  GFile *dest_parent = NULL;
 
   flags |= G_FILE_COPY_NOFOLLOW_SYMLINKS;
 
@@ -347,50 +412,22 @@ linkcopy_internal (GFile          *src,
   /* 128 attempts seems reasonable... */
   for (i = 0; i < 128; i++)
     {
-      int res;
-      gs_free char *tmp_name = NULL;
-      gs_unref_object GFile *tmp_dest = NULL;
+      gboolean tryagain;
 
-      if (g_cancellable_set_error_if_cancelled (cancellable, error))
+      if (!linkcopy_internal_attempt (src, dest, dest_parent,
+                                      flags, sync_data,
+                                      enable_guestfs_fuse_workaround,
+                                      &tryagain,
+                                      cancellable, error))
         goto out;
 
-      tmp_name = gen_tmp_name (NULL, NULL);
-      tmp_dest = g_file_get_child (dest_parent, tmp_name);
-
-      res = link (gs_file_get_path_cached (src), gs_file_get_path_cached (tmp_dest));
-      if (res == -1)
-        {
-          if (errno == EEXIST)
-            continue;
-          else if (errno == EXDEV || errno == EMLINK || errno == EPERM
-                   || (enable_guestfs_fuse_workaround && errno == ENOENT))
-            {
-              if (!g_file_copy (src, tmp_dest, flags,
-                                cancellable, NULL, NULL, error))
-                goto out;
-            }
-          else
-            {
-              _set_error_from_errno (error);
-              goto out;
-            }
-        }
-      
-      if (sync_data)
-        {
-          /* Now, we need to fdatasync */
-          if (!gs_file_sync_data (tmp_dest, cancellable, error))
-            goto out;
-        }
-
-      if (!gs_file_rename (tmp_dest, dest, cancellable, error))
-        goto out;
-
-      break;
+      if (!tryagain)
+        break;
     }
 
   ret = TRUE;
  out:
+  g_clear_object (&dest_parent);
   return ret;
 
 }
@@ -654,14 +691,13 @@ gs_file_ensure_directory (GFile         *dir,
 {
   gboolean ret = FALSE;
   GError *temp_error = NULL;
+  GFile *parent = NULL;
 
   if (!g_file_make_directory (dir, cancellable, &temp_error))
     {
       if (with_parents &&
           g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
         {
-          gs_unref_object GFile *parent = NULL;
-
           g_clear_error (&temp_error);
 
           parent = g_file_get_parent (dir);
@@ -684,6 +720,7 @@ gs_file_ensure_directory (GFile         *dir,
 
   ret = TRUE;
  out:
+  g_clear_object (&parent);
   return ret;
 }
 

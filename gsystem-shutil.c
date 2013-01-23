@@ -34,11 +34,91 @@ cp_internal (GFile         *src,
              GFile         *dest,
              gboolean       use_hardlinks,
              GCancellable  *cancellable,
+             GError       **error);
+
+static gboolean
+cp_internal_one_item (GFile         *src,
+                      GFile         *dest,
+                      GFileInfo     *file_info,
+                      gboolean       use_hardlinks,
+                      GCancellable  *cancellable,
+                      GError       **error)
+{
+  gboolean ret = FALSE;
+  const char *name = g_file_info_get_name (file_info);
+  GFile *src_child = g_file_get_child (src, name);
+  GFile *dest_child = g_file_get_child (dest, name);
+
+  if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
+    {
+      if (!gs_file_ensure_directory (dest_child, FALSE, cancellable, error))
+        goto out;
+
+      /* Can't do this even though we'd like to; it fails with an error about
+       * setting standard::type not being supported =/
+       *
+       if (!g_file_set_attributes_from_info (dest_child, file_info, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+       cancellable, error))
+       goto out;
+      */
+      if (chmod (gs_file_get_path_cached (dest_child),
+                 g_file_info_get_attribute_uint32 (file_info, "unix::mode")) == -1)
+        {
+          int errsv = errno;
+          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                               g_strerror (errsv));
+          goto out;
+        }
+
+      if (!cp_internal (src_child, dest_child, use_hardlinks, cancellable, error))
+        goto out;
+    }
+  else
+    {
+      gboolean did_link = FALSE;
+      (void) unlink (gs_file_get_path_cached (dest_child));
+      if (use_hardlinks)
+        {
+          if (link (gs_file_get_path_cached (src_child), gs_file_get_path_cached (dest_child)) == -1)
+            {
+              if (!(errno == EMLINK || errno == EXDEV))
+                {
+                  int errsv = errno;
+                  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                                       g_strerror (errsv));
+                  goto out;
+                }
+              use_hardlinks = FALSE;
+            }
+          else
+            did_link = TRUE;
+        }
+      if (!did_link)
+        {
+          if (!g_file_copy (src_child, dest_child,
+                            G_FILE_COPY_OVERWRITE | G_FILE_COPY_ALL_METADATA | G_FILE_COPY_NOFOLLOW_SYMLINKS,
+                            cancellable, NULL, NULL, error))
+            goto out;
+        }
+    }
+
+  ret = TRUE;
+ out:
+  g_clear_object (&src_child);
+  g_clear_object (&dest_child);
+  return ret;
+}
+
+static gboolean
+cp_internal (GFile         *src,
+             GFile         *dest,
+             gboolean       use_hardlinks,
+             GCancellable  *cancellable,
              GError       **error)
 {
   gboolean ret = FALSE;
-  gs_unref_object GFileEnumerator *enumerator = NULL;
-  gs_unref_object GFileInfo *file_info = NULL;
+  GFileEnumerator *enumerator = NULL;
+  GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
   enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::mode",
@@ -52,62 +132,9 @@ cp_internal (GFile         *src,
 
   while ((file_info = g_file_enumerator_next_file (enumerator, cancellable, &temp_error)) != NULL)
     {
-      const char *name = g_file_info_get_name (file_info);
-      gs_unref_object GFile *src_child = g_file_get_child (src, name);
-      gs_unref_object GFile *dest_child = g_file_get_child (dest, name);
-
-      if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
-        {
-          if (!gs_file_ensure_directory (dest_child, FALSE, cancellable, error))
-            goto out;
-
-          /* Can't do this even though we'd like to; it fails with an error about
-           * setting standard::type not being supported =/
-           *
-           if (!g_file_set_attributes_from_info (dest_child, file_info, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-           cancellable, error))
-           goto out;
-          */
-          if (chmod (gs_file_get_path_cached (dest_child),
-                     g_file_info_get_attribute_uint32 (file_info, "unix::mode")) == -1)
-            {
-              int errsv = errno;
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                   g_strerror (errsv));
-              goto out;
-            }
-
-          if (!cp_internal (src_child, dest_child, use_hardlinks, cancellable, error))
-            goto out;
-        }
-      else
-        {
-          gboolean did_link = FALSE;
-          (void) unlink (gs_file_get_path_cached (dest_child));
-          if (use_hardlinks)
-            {
-              if (link (gs_file_get_path_cached (src_child), gs_file_get_path_cached (dest_child)) == -1)
-                {
-                  if (!(errno == EMLINK || errno == EXDEV))
-                    {
-                      int errsv = errno;
-                      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                           g_strerror (errsv));
-                      goto out;
-                    }
-                  use_hardlinks = FALSE;
-                }
-              else
-                did_link = TRUE;
-            }
-          if (!did_link)
-            {
-              if (!g_file_copy (src_child, dest_child,
-                                G_FILE_COPY_OVERWRITE | G_FILE_COPY_ALL_METADATA | G_FILE_COPY_NOFOLLOW_SYMLINKS,
-                                cancellable, NULL, NULL, error))
-                goto out;
-            }
-        }
+      if (!cp_internal_one_item (src, dest, file_info, use_hardlinks,
+                                 cancellable, error))
+        goto out;
       g_clear_object (&file_info);
     }
   if (temp_error)
@@ -118,6 +145,8 @@ cp_internal (GFile         *src,
 
   ret = TRUE;
  out:
+  g_clear_object (&enumerator);
+  g_clear_object (&file_info);
   return ret;
 }
 
@@ -180,8 +209,8 @@ gs_shutil_rm_rf (GFile        *path,
                  GError      **error)
 {
   gboolean ret = FALSE;
-  gs_unref_object GFileEnumerator *dir_enum = NULL;
-  gs_unref_object GFileInfo *file_info = NULL;
+  GFileEnumerator *dir_enum = NULL;
+  GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
   dir_enum = g_file_enumerate_children (path, "standard::type,standard::name", 
@@ -209,7 +238,7 @@ gs_shutil_rm_rf (GFile        *path,
 
   while ((file_info = g_file_enumerator_next_file (dir_enum, cancellable, &temp_error)) != NULL)
     {
-      gs_unref_object GFile *subpath = NULL;
+      GFile *subpath = NULL;
       GFileType type;
       const char *name;
 
@@ -221,12 +250,18 @@ gs_shutil_rm_rf (GFile        *path,
       if (type == G_FILE_TYPE_DIRECTORY)
         {
           if (!gs_shutil_rm_rf (subpath, cancellable, error))
-            goto out;
+            {
+              g_object_unref (subpath);
+              goto out;
+            }
         }
       else
         {
           if (!gs_file_unlink (subpath, cancellable, error))
-            goto out;
+            {
+              g_object_unref (subpath);
+              goto out;
+            }
         }
       g_clear_object (&file_info);
     }
@@ -241,6 +276,8 @@ gs_shutil_rm_rf (GFile        *path,
 
   ret = TRUE;
  out:
+  g_clear_object (&dir_enum);
+  g_clear_object (&file_info);
   return ret;
 }
 
