@@ -389,6 +389,7 @@ gs_console_begin_status_line (GSConsole     *console,
           if (!g_output_stream_write_all (out, &c, 1, &bytes_written,
                                           cancellable, error))
             goto out;
+          towrite--;
         }
     }
   
