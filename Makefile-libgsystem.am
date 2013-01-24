@@ -20,6 +20,8 @@ EXTRA_DIST += $(libgsystem_srcpath)/README $(libgsystem_srcpath)/COPYING
 libgsystem_la_SOURCES = \
 	$(libgsystem_srcpath)/gsystem-local-alloc.h \
 	$(libgsystem_srcpath)/gsystem-local-alloc.c \
+	$(libgsystem_srcpath)/gsystem-console.h \
+	$(libgsystem_srcpath)/gsystem-console.c \
 	$(libgsystem_srcpath)/gsystem-file-utils.h \
 	$(libgsystem_srcpath)/gsystem-file-utils.c \
 	$(libgsystem_srcpath)/gsystem-shutil.h \
