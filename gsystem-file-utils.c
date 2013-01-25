@@ -36,9 +36,13 @@ static int
 close_nointr (int fd)
 {
   int res;
-  do
-    res = close (fd);
-  while (G_UNLIKELY (res != 0 && errno == EINTR));
+  /* Note this is NOT actually a retry loop.
+   * See: https://bugzilla.gnome.org/show_bug.cgi?id=682819
+   */
+  res = close (fd);
+  /* Just ignore EINTR...on Linux, retrying is wrong. */
+  if (res == EINTR)
+    res = 0;
   return res;
 }
 
