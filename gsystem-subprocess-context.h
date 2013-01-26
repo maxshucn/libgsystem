@@ -63,6 +63,9 @@ GSSubprocessContext * gs_subprocess_context_new_argv0 (const gchar   *argv0,
                                                      gchar        **argv);
 #endif
 
+void             gs_subprocess_context_argv_append (GSSubprocessContext  *self,
+                                                    gchar                *arg);
+
 /* Environment */
 
 void             gs_subprocess_context_set_environment (GSSubprocessContext           *self,
@@ -99,6 +102,15 @@ void             gs_subprocess_context_set_stderr_file_path (GSSubprocessContext
 							    const gchar                  *path);
 void             gs_subprocess_context_set_stderr_fd        (GSSubprocessContext           *self,
 							    gint                          fd);
+
+gboolean         gs_subprocess_context_open_pipe_read       (GSSubprocessContext         *self,
+                                                             GInputStream               **out_stream,
+                                                             gint                        *out_fdno,
+                                                             GError                     **error);
+gboolean         gs_subprocess_context_open_pipe_write      (GSSubprocessContext         *self,
+                                                             GOutputStream              **out_stream,
+                                                             gint                        *out_fdno,
+                                                             GError                     **error);
 #endif
 
 /* Child setup, only available on UNIX */

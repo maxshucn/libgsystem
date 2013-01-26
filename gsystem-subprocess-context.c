@@ -22,6 +22,13 @@
 
 #include "libgsystem.h"
 
+#ifdef G_OS_UNIX
+#include <gio/gunixoutputstream.h>
+#include <gio/gfiledescriptorbased.h>
+#include <gio/gunixinputstream.h>
+#include <glib-unix.h>
+#endif
+
 /**
  * SECTION:gssubprocesscontext
  * @title: GSSubprocess Context
@@ -153,6 +160,7 @@ gs_subprocess_context_init (GSSubprocessContext  *self)
   self->stderr_fd = -1;
   self->stdout_disposition = GS_SUBPROCESS_STREAM_DISPOSITION_INHERIT;
   self->stderr_disposition = GS_SUBPROCESS_STREAM_DISPOSITION_INHERIT;
+  self->pipefds = g_array_new (FALSE, FALSE, sizeof (int));
 }
 
 static void
@@ -167,6 +175,8 @@ gs_subprocess_context_finalize (GObject *object)
   g_free (self->stdin_path);
   g_free (self->stdout_path);
   g_free (self->stderr_path);
+
+  g_array_unref (self->pipefds);
 
   if (G_OBJECT_CLASS (gs_subprocess_context_parent_class)->finalize != NULL)
     G_OBJECT_CLASS (gs_subprocess_context_parent_class)->finalize (object);
@@ -239,6 +249,30 @@ gs_subprocess_context_class_init (GSSubprocessContextClass *class)
 							       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, N_PROPS, gs_subprocess_context_pspecs);
+}
+
+/**
+ * gs_subprocess_context_argv_append:
+ * @self:
+ * @arg: An argument
+ *
+ * Append an argument to the child's argument vector.
+ */
+void
+gs_subprocess_context_argv_append (GSSubprocessContext  *self,
+                                   gchar                *arg)
+{
+  GPtrArray *new_argv = g_ptr_array_new ();
+  gchar **iter;
+
+  for (iter = self->argv; *iter; iter++)
+    g_ptr_array_add (new_argv, *iter);
+  g_ptr_array_add (new_argv, arg);
+  g_ptr_array_add (new_argv, NULL);
+
+  /* Don't free elements */
+  g_free (self->argv);
+  self->argv = (char**)g_ptr_array_free (new_argv, FALSE);
 }
 
 /* Environment */
@@ -377,4 +411,84 @@ gs_subprocess_context_set_child_setup (GSSubprocessContext           *self,
   self->child_setup_func = child_setup;
   self->child_setup_data = user_data;
 }
+
+static gboolean
+open_pipe_internal (GSSubprocessContext         *self,
+                    gboolean                     for_read,
+                    void                       **out_stream,
+                    gint                        *out_fdno,
+                    GError                     **error)
+{
+  int pipefds[2];
+
+  g_return_val_if_fail (out_stream != NULL, FALSE);
+  g_return_val_if_fail (out_fdno != NULL, FALSE);
+
+  if (!g_unix_open_pipe (pipefds, FD_CLOEXEC, error))
+    return FALSE;
+
+  if (for_read)
+    {
+      *out_stream = g_unix_input_stream_new (pipefds[0], TRUE);
+      *out_fdno = pipefds[1];
+    }
+  else
+    {
+      *out_stream = g_unix_output_stream_new (pipefds[1], TRUE);
+      *out_fdno = pipefds[0];
+    }
+  g_array_append_val (self->pipefds, *out_fdno);
+
+  return TRUE;
+}
+
+/**
+ * gs_subprocess_context_open_pipe_read:
+ * @self:
+ * @out_stream: (out) (transfer full): A newly referenced output stream
+ * @out_fdno: File descriptor number for the subprocess side of the pipe
+ *
+ * This allows you to open a pipe between the parent and child
+ * processes, independent of the standard streams.  For this function,
+ * the pipe is set up so that the parent can read, and the child can
+ * write.  For the opposite version, see
+ * gs_subprocess_context_open_pipe_write().
+ *
+ * The returned @out_fdno is the file descriptor number that the child
+ * will see; you need to communicate this number via a separate
+ * channel, such as the argument list.  For example, if you're using
+ * this pipe to send a password, provide
+ * <literal>--password-fd=&lt;fdno string&gt;</literal>.
+ *
+ * Returns: %TRUE on success, %FALSE on error (and @error will be set)
+ */
+gboolean
+gs_subprocess_context_open_pipe_read (GSSubprocessContext         *self,
+                                      GInputStream               **out_stream,
+                                      gint                        *out_fdno,
+                                      GError                     **error)
+{
+  return open_pipe_internal (self, TRUE, (void**)out_stream, out_fdno, error);
+}
+
+/**
+ * gs_subprocess_context_open_pipe_write:
+ * @self:
+ * @out_stream: (out) (transfer full): A newly referenced stream
+ * @out_fdno: File descriptor number for the subprocess side of the pipe
+ *
+ * Like gs_subprocess_context_open_pipe_read(), but returns a writable
+ * channel from which the child process can read.
+ *
+ * Returns: %TRUE on success, %FALSE on error (and @error will be set)
+ */
+gboolean
+gs_subprocess_context_open_pipe_write (GSSubprocessContext         *self,
+                                       GOutputStream              **out_stream,
+                                       gint                        *out_fdno,
+                                       GError                     **error)
+{
+  return open_pipe_internal (self, FALSE, (void**)out_stream, out_fdno, error);
+}
+
 #endif

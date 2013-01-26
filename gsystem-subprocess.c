@@ -279,9 +279,10 @@ unix_open_file (const char  *filename,
 
 typedef struct
 {
-  gint             fds[3];
-  GSpawnChildSetupFunc child_setup_func;
-  gpointer             child_setup_data;
+  gint                   fds[3];
+  GArray                *pipefds;
+  GSpawnChildSetupFunc   child_setup_func;
+  gpointer               child_setup_data;
 } ChildData;
 
 static void
@@ -289,6 +290,7 @@ child_setup (gpointer user_data)
 {
   ChildData *child_data = user_data;
   gint i;
+  gint result;
 
   /* We're on the child side now.  "Rename" the file descriptors in
    * child_data.fds[] to stdin/stdout/stderr.
@@ -298,14 +300,31 @@ child_setup (gpointer user_data)
    * have been created O_CLOEXEC.
    */
   for (i = 0; i < 3; i++)
-    if (child_data->fds[i] != -1 && child_data->fds[i] != i)
-      {
-        gint result;
+    {
+      if (child_data->fds[i] != -1 && child_data->fds[i] != i)
+        {
+          do
+            result = dup2 (child_data->fds[i], i);
+          while (G_UNLIKELY (result == -1 && errno == EINTR));
+        }
+    }
 
-        do
-          result = dup2 (child_data->fds[i], i);
-        while (result == -1 && errno == EINTR);
-      }
+  /* Unset the CLOEXEC flag on each of our pipes */
+  for (i = 0; i < child_data->pipefds->len; i++)
+    {
+      int fd = g_array_index (child_data->pipefds, int, i);
+      int flags;
+
+      do
+        flags = fcntl (fd, F_GETFL);
+      while (G_UNLIKELY (flags == -1 && errno == EINTR));
+
+      flags &= ~FD_CLOEXEC;
+      
+      do
+        result = fcntl (fd, F_SETFD, flags);
+      while (G_UNLIKELY (result == -1 && errno == EINTR));
+    }
 
   if (child_data->child_setup_func)
     child_data->child_setup_func (child_data->child_setup_data);
@@ -400,6 +419,8 @@ initable_init (GInitable     *initable,
     child_data.fds[2] = 1;
   else
     g_assert_not_reached ();
+
+  child_data.pipefds = self->context->pipefds;
 
   if (self->context->keep_descriptors)
     spawn_flags |= G_SPAWN_LEAVE_DESCRIPTORS_OPEN;
