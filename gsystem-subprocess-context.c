@@ -160,7 +160,8 @@ gs_subprocess_context_init (GSSubprocessContext  *self)
   self->stderr_fd = -1;
   self->stdout_disposition = GS_SUBPROCESS_STREAM_DISPOSITION_INHERIT;
   self->stderr_disposition = GS_SUBPROCESS_STREAM_DISPOSITION_INHERIT;
-  self->pipefds = g_array_new (FALSE, FALSE, sizeof (int));
+  self->postfork_close_fds = g_array_new (FALSE, FALSE, sizeof (int));
+  self->inherit_fds = g_array_new (FALSE, FALSE, sizeof (int));
 }
 
 static void
@@ -176,7 +177,8 @@ gs_subprocess_context_finalize (GObject *object)
   g_free (self->stdout_path);
   g_free (self->stderr_path);
 
-  g_array_unref (self->pipefds);
+  g_array_unref (self->postfork_close_fds);
+  g_array_unref (self->inherit_fds);
 
   if (G_OBJECT_CLASS (gs_subprocess_context_parent_class)->finalize != NULL)
     G_OBJECT_CLASS (gs_subprocess_context_parent_class)->finalize (object);
@@ -260,14 +262,14 @@ gs_subprocess_context_class_init (GSSubprocessContextClass *class)
  */
 void
 gs_subprocess_context_argv_append (GSSubprocessContext  *self,
-                                   gchar                *arg)
+                                   const gchar          *arg)
 {
   GPtrArray *new_argv = g_ptr_array_new ();
   gchar **iter;
 
   for (iter = self->argv; *iter; iter++)
     g_ptr_array_add (new_argv, *iter);
-  g_ptr_array_add (new_argv, arg);
+  g_ptr_array_add (new_argv, g_strdup (arg));
   g_ptr_array_add (new_argv, NULL);
 
   /* Don't free elements */
@@ -437,7 +439,8 @@ open_pipe_internal (GSSubprocessContext         *self,
       *out_stream = g_unix_output_stream_new (pipefds[1], TRUE);
       *out_fdno = pipefds[0];
     }
-  g_array_append_val (self->pipefds, *out_fdno);
+  g_array_append_val (self->inherit_fds, *out_fdno);
+  g_array_append_val (self->postfork_close_fds, *out_fdno);
 
   return TRUE;
 }
@@ -446,7 +449,7 @@ open_pipe_internal (GSSubprocessContext         *self,
  * gs_subprocess_context_open_pipe_read:
  * @self:
  * @out_stream: (out) (transfer full): A newly referenced output stream
- * @out_fdno: File descriptor number for the subprocess side of the pipe
+ * @out_fdno: (out): File descriptor number for the subprocess side of the pipe
  *
  * This allows you to open a pipe between the parent and child
  * processes, independent of the standard streams.  For this function,
@@ -475,7 +478,7 @@ gs_subprocess_context_open_pipe_read (GSSubprocessContext         *self,
  * gs_subprocess_context_open_pipe_write:
  * @self:
  * @out_stream: (out) (transfer full): A newly referenced stream
- * @out_fdno: File descriptor number for the subprocess side of the pipe
+ * @out_fdno: (out): File descriptor number for the subprocess side of the pipe
  *
  * Like gs_subprocess_context_open_pipe_read(), but returns a writable
  * channel from which the child process can read.

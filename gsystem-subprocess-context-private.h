@@ -53,7 +53,8 @@ struct _GSSubprocessContext
   gint stderr_fd;
   gchar *stderr_path;
 
-  GArray *pipefds;
+  GArray *postfork_close_fds;
+  GArray *inherit_fds;
 
   GSpawnChildSetupFunc child_setup_func;
   gpointer child_setup_data;

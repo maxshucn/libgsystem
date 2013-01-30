@@ -64,7 +64,7 @@ GSSubprocessContext * gs_subprocess_context_new_argv0 (const gchar   *argv0,
 #endif
 
 void             gs_subprocess_context_argv_append (GSSubprocessContext  *self,
-                                                    gchar                *arg);
+                                                    const gchar          *arg);
 
 /* Environment */
 

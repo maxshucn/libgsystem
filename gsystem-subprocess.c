@@ -280,7 +280,7 @@ unix_open_file (const char  *filename,
 typedef struct
 {
   gint                   fds[3];
-  GArray                *pipefds;
+  GArray                *inherit_fds;
   GSpawnChildSetupFunc   child_setup_func;
   gpointer               child_setup_data;
 } ChildData;
@@ -309,10 +309,10 @@ child_setup (gpointer user_data)
         }
     }
 
-  /* Unset the CLOEXEC flag on each of our pipes */
-  for (i = 0; i < child_data->pipefds->len; i++)
+  /* Unset the CLOEXEC flag for the child *should* inherit */
+  for (i = 0; i < child_data->inherit_fds->len; i++)
     {
-      int fd = g_array_index (child_data->pipefds, int, i);
+      int fd = g_array_index (child_data->inherit_fds, int, i);
       int flags;
 
       do
@@ -420,7 +420,7 @@ initable_init (GInitable     *initable,
   else
     g_assert_not_reached ();
 
-  child_data.pipefds = self->context->pipefds;
+  child_data.inherit_fds = self->context->inherit_fds;
 
   if (self->context->keep_descriptors)
     spawn_flags |= G_SPAWN_LEAVE_DESCRIPTORS_OPEN;
@@ -457,6 +457,9 @@ out:
   for (i = 0; i < 3; i++)
     if (close_fds[i] != -1)
       close (close_fds[i]);
+
+  for (i = 0; i < self->context->postfork_close_fds->len; i++)
+    (void) close (g_array_index (self->context->postfork_close_fds, int, i));
 
   self->stdin_pipe = platform_output_stream_from_spawn_fd (pipe_fds[0]);
   self->stdout_pipe = platform_input_stream_from_spawn_fd (pipe_fds[1]);
