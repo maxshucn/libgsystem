@@ -305,7 +305,6 @@ linkcopy_internal_attempt (GFile          *src,
                           GError        **error)
 {
   gboolean ret = FALSE;
-  gboolean ret_try_again = FALSE;
   int res;
   char *tmp_name = NULL;
   GFile *tmp_dest = NULL;
@@ -322,7 +321,7 @@ linkcopy_internal_attempt (GFile          *src,
       if (errno == EEXIST)
         {
           /* Nothing, fall through */
-          ret_try_again = TRUE;
+          *out_try_again = TRUE;
           ret = TRUE;
           goto out;
         }
