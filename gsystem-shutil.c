@@ -213,6 +213,31 @@ gs_shutil_rm_rf (GFile        *path,
   GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
+  if (!gs_file_unlink (path, cancellable, &temp_error))
+    {
+      if (g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+        {
+          g_clear_error (&temp_error);
+          ret = TRUE;
+          goto out;
+        }
+      else if (g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_IS_DIRECTORY))
+        {
+          g_clear_error (&temp_error);
+          /* Fall through */
+        }
+      else
+        {
+          g_propagate_error (error, temp_error);
+          goto out;
+        }
+    }
+  else
+    {
+      ret = TRUE;
+      goto out;
+    }
+
   dir_enum = g_file_enumerate_children (path, "standard::type,standard::name", 
                                         G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
                                         cancellable, &temp_error);
@@ -223,16 +248,10 @@ gs_shutil_rm_rf (GFile        *path,
           g_clear_error (&temp_error);
           ret = TRUE;
         }
-      else if (g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY))
-        {
-          g_clear_error (&temp_error);
-          if (!gs_file_unlink (path, cancellable, error))
-            goto out;
-          ret = TRUE;
-        }
       else
-        g_propagate_error (error, temp_error);
-
+        {
+          g_propagate_error (error, temp_error);
+        }
       goto out;
     }
 
