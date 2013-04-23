@@ -415,7 +415,7 @@ linkcopy_internal (GFile          *src,
   /* 128 attempts seems reasonable... */
   for (i = 0; i < 128; i++)
     {
-      gboolean tryagain;
+      gboolean tryagain = FALSE;
 
       if (!linkcopy_internal_attempt (src, dest, dest_parent,
                                       flags, sync_data,
