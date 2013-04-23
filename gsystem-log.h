@@ -1,6 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*-
  *
- * Copyright (C) 2012 Colin Walters <walters@verbum.org>.
+ * Copyright (C) 2013 Colin Walters <walters@verbum.org>.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,18 +18,15 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __LIBGSYSTEM__
-#define __LIBGSYSTEM__
+#ifndef __GSYSTEM_LOG_H__
+#define __GSYSTEM_LOG_H__
 
 #include <gio/gio.h>
 
 G_BEGIN_DECLS
 
-#include <gsystem-console.h>
-#include <gsystem-file-utils.h>
-#include <gsystem-shutil.h>
-#include <gsystem-subprocess.h>
-#include <gsystem-log.h>
+void gs_log_structured (const char *message,
+                        const char *const *keys);
 
 G_END_DECLS
 
