@@ -68,8 +68,11 @@ gs_log_structured (const char *message,
     msgkey = g_strconcat ("MESSAGE=", message, NULL);
     iovs[i].iov_base = msgkey;
     iovs[i].iov_len = strlen (msgkey);
-
+    
+    // The code location isn't useful since we're wrapping
+#define SD_JOURNAL_SUPPRESS_LOCATION
     sd_journal_sendv (iovs, n_opts);
+#undef SD_JOURNAL_SUPPRESS_LOCATION
     
     g_free (msgkey);
 #else
