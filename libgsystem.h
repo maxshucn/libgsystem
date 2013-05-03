@@ -1,6 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*-
  *
- * Copyright (C) 2012 Colin Walters <walters@verbum.org>.
+ * Copyright (C) 2012,2013 Colin Walters <walters@verbum.org>.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,9 @@ G_BEGIN_DECLS
 #include <gsystem-shutil.h>
 #include <gsystem-subprocess.h>
 #include <gsystem-log.h>
+#ifndef _GSYSTEM_NO_LOCAL_ALLOC
+#include <gsystem-local-alloc.h>
+#endif
 
 G_END_DECLS
 

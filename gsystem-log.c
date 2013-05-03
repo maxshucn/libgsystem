@@ -30,6 +30,7 @@
 #endif
 #include <glib-unix.h>
 
+#define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
 
 /**

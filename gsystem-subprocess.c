@@ -18,6 +18,7 @@
 
 #include "config.h"
 
+#define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
 
 /**

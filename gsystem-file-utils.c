@@ -27,6 +27,7 @@
 
 #include <string.h>
 
+#define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>

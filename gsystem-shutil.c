@@ -25,6 +25,7 @@
 #define _GNU_SOURCE
 #endif
 
+#define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
 #include <glib-unix.h>
 #include <sys/stat.h>
