@@ -93,8 +93,10 @@ void
 gs_log_structured_print (const char *message,
                          const char *const *keys)
 {
+#ifdef ENABLE_SYSTEMD_JOURNAL
   static gsize initialized;
   static gboolean stdout_is_socket;
+#endif
 
   gs_log_structured (message, keys);
 
