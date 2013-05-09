@@ -80,3 +80,44 @@ gs_log_structured (const char *message,
     g_print ("%s\n", message);
 #endif
 }
+
+/**
+ * gs_log_structured_print:
+ * @message: A message to log
+ * @keys: (allow-none) (array zero-terminated=1) (element-type utf8): Optional structured data
+ *
+ * Like gs_log_structured(), but also print to standard output (if it
+ * is not already connected to the system log).
+ */
+void
+gs_log_structured_print (const char *message,
+                         const char *const *keys)
+{
+  static gsize initialized;
+  static gboolean stdout_is_socket;
+
+  gs_log_structured (message, keys);
+
+#ifdef ENABLE_SYSTEMD_JOURNAL
+  if (g_once_init_enter (&initialized))
+    {
+      guint64 pid = (guint64) getpid ();
+      char *fdpath = g_strdup_printf ("/proc/%" G_GUINT64_FORMAT "/fd/1", pid);
+      char buf[1024];
+      ssize_t bytes_read;
+
+      if ((bytes_read = readlink (fdpath, buf, sizeof(buf) - 1)) != -1)
+        {
+          buf[bytes_read] = '\0';
+          stdout_is_socket = g_str_has_prefix (buf, "socket:");
+        }
+      else
+        stdout_is_socket = FALSE;
+
+      g_free (fdpath);
+      g_once_init_leave (&initialized, TRUE);
+    }
+  if (!stdout_is_socket)
+    g_print ("%s\n", message);
+#endif
+}

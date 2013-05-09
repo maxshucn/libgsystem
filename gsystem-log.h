@@ -28,6 +28,9 @@ G_BEGIN_DECLS
 void gs_log_structured (const char *message,
                         const char *const *keys);
 
+void gs_log_structured_print (const char *message,
+                              const char *const *keys);
+
 G_END_DECLS
 
 #endif
