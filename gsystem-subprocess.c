@@ -209,7 +209,7 @@ gs_subprocess_unix_queue_waitpid (GSSubprocess  *self)
   GMainContext *worker_context;
   GSource *waitpid_source;
 
-#if GLIB_COMPILATION
+#ifdef GLIB_COMPILATION
   worker_context = GLIB_PRIVATE_CALL (g_get_worker_context) ();
 #else
   worker_context = g_main_context_get_thread_default ();
