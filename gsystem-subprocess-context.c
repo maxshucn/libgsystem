@@ -22,6 +22,8 @@
 
 #include "libgsystem.h"
 
+#if GLIB_CHECK_VERSION(2,34,0)
+
 #ifdef G_OS_UNIX
 #include <gio/gunixoutputstream.h>
 #include <gio/gfiledescriptorbased.h>
@@ -493,5 +495,7 @@ gs_subprocess_context_open_pipe_write (GSSubprocessContext         *self,
 {
   return open_pipe_internal (self, FALSE, (void**)out_stream, out_fdno, error);
 }
+
+#endif
 
 #endif

@@ -21,6 +21,8 @@
 #define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
 
+#if GLIB_CHECK_VERSION(2,34,0)
+
 /**
  * SECTION:gssubprocess
  * @title: GSSubprocess
@@ -961,3 +963,5 @@ gs_subprocess_simple_run_sync (const char                    *cwd,
     g_object_unref (proc);
   return ret;
 }
+
+#endif

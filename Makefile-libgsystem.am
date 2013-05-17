@@ -35,6 +35,7 @@ libgsystem_la_SOURCES = \
 	$(libgsystem_srcpath)/gsystem-subprocess.c \
 	$(libgsystem_srcpath)/libgsystem.h \
 	$(NULL)
+
 libgsystem_la_CFLAGS = $(AM_CFLAGS) $(libgsystem_cflags)
 libgsystem_la_LDFLAGS = -avoid-version -Bsymbolic-functions -export-symbols-regex "^gs_" -no-undefined -export-dynamic
 libgsystem_la_LIBADD = $(libgsystem_libs)

@@ -23,6 +23,8 @@
 
 #include <gio/gio.h>
 
+#if GLIB_CHECK_VERSION(2,34,0)
+
 G_BEGIN_DECLS
 
 #define GS_TYPE_SUBPROCESS_CONTEXT         (gs_subprocess_context_get_type ())
@@ -122,4 +124,5 @@ void             gs_subprocess_context_set_child_setup        (GSSubprocessConte
 
 G_END_DECLS
 
+#endif
 #endif

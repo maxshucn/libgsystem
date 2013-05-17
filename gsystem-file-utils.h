@@ -36,9 +36,11 @@ GMappedFile *gs_file_map_noatime (GFile         *file,
                                   GCancellable  *cancellable,
                                   GError       **error);
 
+#if GLIB_CHECK_VERSION(2,34,0)
 GBytes *gs_file_map_readonly (GFile         *file,
                               GCancellable  *cancellable,
                               GError       **error);
+#endif
 
 gboolean gs_file_sync_data (GFile          *file,
                             GCancellable   *cancellable,

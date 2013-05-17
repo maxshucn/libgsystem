@@ -21,6 +21,10 @@
 #ifndef __GSYSTEM_SUBPROCESS_H__
 #define __GSYSTEM_SUBPROCESS_H__
 
+#include <gio/gio.h>
+
+#if GLIB_CHECK_VERSION(2,34,0)
+
 #include "gsystem-subprocess-context.h"
 
 G_BEGIN_DECLS
@@ -93,4 +97,5 @@ gboolean          gs_subprocess_simple_run_sync (const char                    *
 
 G_END_DECLS
 
+#endif
 #endif

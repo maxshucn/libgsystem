@@ -166,6 +166,7 @@ gs_file_map_noatime (GFile         *file,
   return ret;
 }
 
+#if GLIB_CHECK_VERSION(2,34,0)
 /**
  * gs_file_map_readonly:
  * @file: a #GFile
@@ -196,6 +197,7 @@ gs_file_map_readonly (GFile         *file,
   g_mapped_file_unref (mfile);
   return ret;
 }
+#endif
 
 /**
  * gs_file_sync_data:

@@ -28,7 +28,9 @@ G_BEGIN_DECLS
 #include <gsystem-console.h>
 #include <gsystem-file-utils.h>
 #include <gsystem-shutil.h>
+#if GLIB_CHECK_VERSION(2,34,0)
 #include <gsystem-subprocess.h>
+#endif
 #include <gsystem-log.h>
 #ifndef _GSYSTEM_NO_LOCAL_ALLOC
 #include <gsystem-local-alloc.h>
