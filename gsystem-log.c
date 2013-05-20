@@ -123,3 +123,32 @@ gs_log_structured_print (const char *message,
     g_print ("%s\n", message);
 #endif
 }
+
+/**
+ * gs_log_structured_print_id_v:
+ * @message_id: A unique MESSAGE_ID
+ * @format: A format string
+ *
+ * The provided @message_id is a unique MESSAGE_ID (see <ulink url="http://www.freedesktop.org/software/systemd/man/systemd.journal-fields.html"> for more information).
+ *
+ * This function otherwise acts as gs_log_structured_print(), taking
+ * @format as a format string.
+ */
+void
+gs_log_structured_print_id_v (const char *message_id,
+                              const char *format,
+                              ...)
+{
+  char *keys[] = { NULL, NULL };
+  char *msg;
+  va_list args;
+
+  va_start (args, format);
+  msg = g_strdup_vprintf (format, args);
+  va_end (args);
+
+  keys[0] = g_strconcat ("MESSAGE_ID=", message_id, NULL);
+  gs_log_structured_print (msg, (const char *const *)keys);
+  g_free (keys[0]);
+  g_free (msg);
+}

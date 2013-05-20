@@ -31,6 +31,10 @@ void gs_log_structured (const char *message,
 void gs_log_structured_print (const char *message,
                               const char *const *keys);
 
+void gs_log_structured_print_id_v (const char *message_id,
+                                   const char *format,
+                                   ...) G_GNUC_PRINTF (2, 3);
+
 G_END_DECLS
 
 #endif
