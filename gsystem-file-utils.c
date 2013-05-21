@@ -29,6 +29,7 @@
 
 #define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
+#include "gsystem-glib-compat.h"
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
 #include <glib-unix.h>
