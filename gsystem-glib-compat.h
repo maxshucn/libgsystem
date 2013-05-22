@@ -51,3 +51,4 @@ g_type_ensure (GType type)
 
 #endif
 
+#endif
