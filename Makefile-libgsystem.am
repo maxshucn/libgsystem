@@ -24,6 +24,7 @@ libgsystem_la_SOURCES = \
 	$(libgsystem_srcpath)/gsystem-console.c \
 	$(libgsystem_srcpath)/gsystem-file-utils.h \
 	$(libgsystem_srcpath)/gsystem-file-utils.c \
+	$(libgsystem_srcpath)/gsystem-glib-compat.h \
 	$(libgsystem_srcpath)/gsystem-shutil.h \
 	$(libgsystem_srcpath)/gsystem-shutil.c \
 	$(libgsystem_srcpath)/gsystem-log.h \
