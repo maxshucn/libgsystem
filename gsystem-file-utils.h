@@ -29,6 +29,12 @@ const char *gs_file_get_path_cached (GFile *file);
 
 const char *gs_file_get_basename_cached (GFile *file);
 
+gboolean gs_file_enumerator_iterate (GFileEnumerator  *direnum,
+                                     GFileInfo       **out_info,
+                                     GFile           **out_child,
+                                     GCancellable     *cancellable,
+                                     GError          **error);
+
 GInputStream *gs_file_read_noatime (GFile         *file,
                                     GCancellable  *cancellable,
                                     GError       **error);

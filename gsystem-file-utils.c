@@ -545,6 +545,100 @@ gs_file_get_basename_cached (GFile *file)
 }
 
 /**
+ * gs_file_enumerator_iterate:
+ * @direnum: an open #GFileEnumerator
+ * @out_info: (out) (transfer none) (allow-none): Output location for the next #GFileInfo
+ * @out_child: (out) (transfer none) (allow-none): Output location for the next #GFile, or %NULL
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * This is a version of g_file_enumerator_next_file() that's easier to
+ * use correctly from C programs.  With g_file_enumerator_next_file(),
+ * the gboolean return value signifies "end of iteration or error", which
+ * requires allocation of a temporary #GError.
+ *
+ * In contrast, with this function, a %FALSE return from
+ * gs_file_enumerator_iterate() <emphasis>always</emphasis> means
+ * "error".  End of iteration is signaled by @out_info being %NULL.
+ *
+ * Another crucial difference is that the references for @out_info and
+ * @out_child are owned by @direnum (they are cached as hidden
+ * properties).  You must not unref them in your own code.  This makes
+ * memory management significantly easier for C code in combination
+ * with loops.
+ *
+ * Finally, this function optionally allows retrieving a #GFile as
+ * well.
+ *
+ * The code pattern for correctly using gs_file_enumerator_iterate() from C
+ * is:
+ *
+ * |[
+ * direnum = g_file_enumerate_children (file, ...);
+ * while (TRUE)
+ *   {
+ *     GFileInfo *info;
+ *     if (!gs_file_enumerator_iterate (direnum, &info, NULL, cancellable, error))
+ *       goto out;
+ *     if (!info)
+ *       break;
+ *     ... do stuff with "info"; do not unref it! ...
+ *   }
+ * 
+ * out:
+ *   g_object_unref (direnum); // Note: frees the last @info
+ * ]|
+ */
+gboolean
+gs_file_enumerator_iterate (GFileEnumerator  *direnum,
+                            GFileInfo       **out_info,
+                            GFile           **out_child,
+                            GCancellable     *cancellable,
+                            GError          **error)
+{
+  gboolean ret = FALSE;
+  GError *temp_error = NULL;
+
+  static GQuark cached_info_quark;
+  static GQuark cached_child_quark;
+  static gsize quarks_initialized;
+
+  g_return_val_if_fail (direnum != NULL, FALSE);
+  g_return_val_if_fail (out_info != NULL, FALSE);
+
+  if (g_once_init_enter (&quarks_initialized))
+    {
+      cached_info_quark = g_quark_from_static_string ("gsystem-cached-info");
+      cached_child_quark = g_quark_from_static_string ("gsystem-cached-child");
+      g_once_init_leave (&quarks_initialized, 1);
+    }
+
+  
+  *out_info = g_file_enumerator_next_file (direnum, cancellable, &temp_error);
+  if (out_child)
+    *out_child = NULL;
+  if (temp_error != NULL)
+    {
+      g_propagate_error (error, temp_error);
+      goto out;
+    }
+  else if (*out_info != NULL)
+    {
+      g_object_set_qdata_full ((GObject*)direnum, cached_info_quark, *out_info, (GDestroyNotify)g_object_unref);
+      if (out_child != NULL)
+        {
+          const char *name = g_file_info_get_name (*out_info);
+          *out_child = g_file_get_child (g_file_enumerator_get_container (direnum), name);
+          g_object_set_qdata_full ((GObject*)direnum, cached_child_quark, *out_child, (GDestroyNotify)g_object_unref);
+        }
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+/**
  * gs_file_rename:
  * @from: Current path
  * @to: New path
