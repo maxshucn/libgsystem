@@ -33,6 +33,7 @@
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
 #include <glib-unix.h>
+#include <limits.h>
 
 static int
 close_nointr (int fd)
@@ -966,4 +967,26 @@ gs_file_get_relpath (GFile *one,
   g_free (two_path);
 
   return g_string_free (path, FALSE);
+}
+
+/**
+ * gs_file_realpath:
+ * @file: A #GFile
+ *
+ * Return a #GFile that contains the same path with symlinks
+ * followed. That is, it's a #GFile whose path is the result
+ * of calling realpath() on @file.
+ *
+ * Returns: (transfer full): A new #GFile
+ */
+GFile *
+gs_file_realpath (GFile *file)
+{
+  gchar *path;
+  gchar path_real[PATH_MAX];
+
+  path = g_file_get_path (file);
+  realpath ((const char *) path, path_real);
+  g_free (path);
+  return g_file_new_for_path (path_real);
 }

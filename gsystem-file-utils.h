@@ -101,6 +101,8 @@ gchar *gs_file_load_contents_utf8 (GFile         *file,
 gchar *gs_file_get_relpath (GFile *one,
                             GFile *two);
 
+GFile * gs_file_realpath (GFile *file);
+
 G_END_DECLS
 
 #endif
