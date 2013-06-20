@@ -892,3 +892,78 @@ gs_file_load_contents_utf8 (GFile         *file,
   return ret_contents;
 }
 
+static int
+path_common_directory (char *one,
+                       char *two)
+{
+  int dir_index = 0;
+  int i = 0;
+
+  while (*one && *two)
+    {
+      if (*one != *two)
+        break;
+      if (*one == '/')
+        dir_index = i + 1;
+
+      one++;
+      two++;
+      i++;
+    }
+
+  return dir_index;
+}
+
+/**
+ * gs_file_get_relpath:
+ * @one: The first #GFile
+ * @two: The second #GFile
+ *
+ * Like gs_file_get_relative_path(), but does not mandate that
+ * the two files have any parent in common. This function will
+ * instead insert "../" where appropriate.
+ *
+ * Returns: (transfer full): The relative path between the two.
+ */
+gchar *
+gs_file_get_relpath (GFile *one,
+                     GFile *two)
+{
+  gchar *simple_path;
+  gchar *one_path, *one_suffix;
+  gchar *two_path, *two_suffix;
+  GString *path;
+  int index;
+
+  simple_path = g_file_get_relative_path (one, two);
+  if (simple_path)
+    return simple_path;
+
+  one_path = g_file_get_path (one);
+  two_path = g_file_get_path (two);
+
+  index = path_common_directory (one_path, two_path);
+  one_suffix = one_path + index;
+  two_suffix = two_path + index;
+
+  path = g_string_new ("");
+
+  /* For every leftover path segment one has, append "../" so
+   * that we reach the same directory. */
+  while (*one_suffix)
+    {
+      g_string_append (path, "../");
+      one_suffix = strchr (one_suffix, '/');
+      if (one_suffix == NULL)
+        break;
+      one_suffix++;
+    }
+
+  /* And now append the leftover stuff on two's side. */
+  g_string_append (path, two_suffix);
+
+  g_free (one_path);
+  g_free (two_path);
+
+  return g_string_free (path, FALSE);
+}

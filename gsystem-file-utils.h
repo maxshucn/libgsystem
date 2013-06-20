@@ -98,6 +98,8 @@ gchar *gs_file_load_contents_utf8 (GFile         *file,
                                    GCancellable  *cancellable,
                                    GError       **error);
 
+gchar *gs_file_get_relpath (GFile *one,
+                            GFile *two);
 
 G_END_DECLS
 
