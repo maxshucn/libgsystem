@@ -291,10 +291,10 @@ gs_subprocess_context_argv_append (GSSubprocessContext  *self,
  */
 void
 gs_subprocess_context_set_environment (GSSubprocessContext           *self,
-				      gchar                       **environ)
+                                       gchar                        **env)
 {
   g_strfreev (self->envp);
-  self->envp = g_strdupv (environ);
+  self->envp = g_strdupv (env);
 }
 
 void
