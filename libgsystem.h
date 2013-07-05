@@ -25,6 +25,14 @@
 
 G_BEGIN_DECLS
 
+#define gs_transfer_out_value(outp, srcp) G_STMT_START {   \
+  if (outp)                                                \
+    {                                                      \
+      *(outp) = *(srcp);                                   \
+      *(srcp) = NULL;                                      \
+    }                                                      \
+  } G_STMT_END;
+
 #include <gsystem-console.h>
 #include <gsystem-file-utils.h>
 #include <gsystem-shutil.h>
