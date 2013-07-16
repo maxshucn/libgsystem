@@ -312,9 +312,18 @@ get_default_tmp_prefix (void)
   return tmpprefix;
 }
 
-static char *
-gen_tmp_name (const char *prefix,
-              const char *suffix)
+/**
+ * gsystem_fileutil_gen_tmp_name:
+ * @prefix: (allow-none): String prepended to the result
+ * @suffix: (allow-none): String suffixed to the result
+ *
+ * Generate a name suitable for use as a temporary file.  This
+ * function does no I/O; it is not guaranteed that a file with that
+ * name does not exist.
+ */
+char *
+gsystem_fileutil_gen_tmp_name (const char *prefix,
+                               const char *suffix)
 {
   static const char table[] = "ABCEDEFGHIJKLMNOPQRSTUVWXYZabcedefghijklmnopqrstuvwxyz0123456789";
   GString *str = g_string_new ("");
@@ -356,7 +365,7 @@ linkcopy_internal_attempt (GFile          *src,
   if (g_cancellable_set_error_if_cancelled (cancellable, error))
     goto out;
 
-  tmp_name = gen_tmp_name (NULL, NULL);
+  tmp_name = gsystem_fileutil_gen_tmp_name (NULL, NULL);
   tmp_dest = g_file_get_child (dest_parent, tmp_name);
 
   res = link (gs_file_get_path_cached (src), gs_file_get_path_cached (tmp_dest));
