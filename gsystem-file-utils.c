@@ -32,6 +32,7 @@
 #include "gsystem-glib-compat.h"
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
+#include <gio/gunixoutputstream.h>
 #include <glib-unix.h>
 #include <limits.h>
 
@@ -247,6 +248,44 @@ gs_file_sync_data (GFile          *file,
  out:
   if (fd != -1)
     close_nointr_noerror (fd);
+  return ret;
+}
+
+/**
+ * gs_file_create:
+ * @file: Path to non-existent file
+ * @mode: Unix access permissions
+ * @out_stream: (out) (transfer full) (allow-none): Newly created output, or %NULL
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Like g_file_create(), except this function allows specifying the
+ * access mode.  This allows atomically creating private files.
+ */
+gboolean
+gs_file_create (GFile          *file,
+                int             mode,
+                GOutputStream **out_stream,
+                GCancellable   *cancellable,
+                GError        **error)
+{
+  gboolean ret = FALSE;
+  int fd;
+  GOutputStream *ret_stream = NULL;
+
+  fd = open_nointr (gs_file_get_path_cached (file), O_WRONLY | O_CREAT | O_EXCL, mode);
+  if (fd < 0)
+    {
+      _set_error_from_errno (error);
+      goto out;
+    }
+  
+  ret_stream = g_unix_output_stream_new (fd, TRUE);
+  
+  ret = TRUE;
+  gs_transfer_out_value (out_stream, &ret_stream);
+ out:
+  g_clear_object (&ret_stream);
   return ret;
 }
 
