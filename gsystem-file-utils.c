@@ -1025,7 +1025,7 @@ gs_file_get_relpath (GFile *one,
  * followed. That is, it's a #GFile whose path is the result
  * of calling realpath() on @file.
  *
- * Returns: (transfer full): A new #GFile
+ * Returns: (allow-none) (transfer full): A new #GFile or %NULL if @file is invalid
  */
 GFile *
 gs_file_realpath (GFile *file)
@@ -1034,7 +1034,13 @@ gs_file_realpath (GFile *file)
   gchar path_real[PATH_MAX];
 
   path = g_file_get_path (file);
-  realpath ((const char *) path, path_real);
+
+  if (realpath ((const char *) path, path_real) == NULL)
+    {
+      g_free (path);
+      return NULL;
+    }
+
   g_free (path);
   return g_file_new_for_path (path_real);
 }
