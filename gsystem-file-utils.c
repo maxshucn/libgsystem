@@ -279,6 +279,12 @@ gs_file_create (GFile          *file,
       _set_error_from_errno (error);
       goto out;
     }
+
+  if (fchmod (fd, mode) < 0)
+    {
+      _set_error_from_errno (error);
+      goto out;
+    }
   
   ret_stream = g_unix_output_stream_new (fd, TRUE);
   
