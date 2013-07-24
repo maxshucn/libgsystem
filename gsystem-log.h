@@ -25,6 +25,8 @@
 
 G_BEGIN_DECLS
 
+gboolean gs_stdout_is_journal (void);
+
 void gs_log_structured (const char *message,
                         const char *const *keys);
 

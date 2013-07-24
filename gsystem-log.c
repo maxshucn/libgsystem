@@ -82,25 +82,20 @@ gs_log_structured (const char *message,
 }
 
 /**
- * gs_log_structured_print:
- * @message: A message to log
- * @keys: (allow-none) (array zero-terminated=1) (element-type utf8): Optional structured data
+ * gs_stdout_is_journal:
  *
- * Like gs_log_structured(), but also print to standard output (if it
- * is not already connected to the system log).
+ * Use this function when you want your code to behave differently
+ * depeneding on whether your program was started as a systemd unit,
+ * or e.g. interactively at a terminal.
+ *
+ * Returns: %TRUE if stdout is (probably) connnected to the systemd journal
  */
-void
-gs_log_structured_print (const char *message,
-                         const char *const *keys)
+gboolean
+gs_stdout_is_journal (void)
 {
-#ifdef ENABLE_SYSTEMD_JOURNAL
   static gsize initialized;
   static gboolean stdout_is_socket;
-#endif
 
-  gs_log_structured (message, keys);
-
-#ifdef ENABLE_SYSTEMD_JOURNAL
   if (g_once_init_enter (&initialized))
     {
       guint64 pid = (guint64) getpid ();
@@ -119,9 +114,26 @@ gs_log_structured_print (const char *message,
       g_free (fdpath);
       g_once_init_leave (&initialized, TRUE);
     }
-  if (!stdout_is_socket)
+
+  return stdout_is_socket;
+}
+
+/**
+ * gs_log_structured_print:
+ * @message: A message to log
+ * @keys: (allow-none) (array zero-terminated=1) (element-type utf8): Optional structured data
+ *
+ * Like gs_log_structured(), but also print to standard output (if it
+ * is not already connected to the system log).
+ */
+void
+gs_log_structured_print (const char *message,
+                         const char *const *keys)
+{
+  gs_log_structured (message, keys);
+
+  if (!gs_stdout_is_journal ())
     g_print ("%s\n", message);
-#endif
 }
 
 /**
