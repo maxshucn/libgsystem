@@ -34,6 +34,7 @@ void gs_local_free (void *loc);
 void gs_local_obj_unref (void *loc);
 void gs_local_variant_unref (void *loc);
 void gs_local_variant_iter_free (void *loc);
+void gs_local_array_unref (void *loc);
 void gs_local_ptrarray_unref (void *loc);
 void gs_local_hashtable_unref (void *loc);
 
@@ -69,6 +70,16 @@ void gs_local_hashtable_unref (void *loc);
  * scope.
  */
 #define gs_free_variant_iter __attribute__ ((cleanup(gs_local_variant_iter_free)))
+
+/**
+ * gs_unref_array:
+ *
+ * Call g_array_unref() on a variable location when it goes out of
+ * scope.  Note that unlike g_array_unref(), the variable may be
+ * %NULL.
+
+ */
+#define gs_unref_array __attribute__ ((cleanup(gs_local_array_unref)))
 
 /**
  * gs_unref_ptrarray:

@@ -114,6 +114,12 @@ gs_local_ptrarray_unref (void *loc)
 }
 
 void
+gs_local_array_unref (void *loc)
+{
+  _gs_local_free(GArray, g_array_unref);
+}
+
+void
 gs_local_hashtable_unref (void *loc)
 {
   _gs_local_free(GHashTable, g_hash_table_unref);
