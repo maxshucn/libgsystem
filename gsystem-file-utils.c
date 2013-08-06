@@ -35,6 +35,7 @@
 #include <gio/gunixoutputstream.h>
 #include <glib-unix.h>
 #include <limits.h>
+#include <dirent.h>
 
 static int
 close_nointr (int fd)
@@ -426,6 +427,75 @@ gsystem_fileutil_gen_tmp_name (const char *prefix,
   g_string_append (str, suffix);
 
   return g_string_free (str, FALSE);
+}
+
+/**
+ * gs_file_open_in_tmpdir:
+ * @tmpdir: Directory to place temporary file
+ * @mode: Default mode (will be affected by umask)
+ * @out_file: (out) (transfer full): Newly created file path
+ * @out_stream: (out) (transfer full) (allow-none): Newly created output stream
+ * @cancellable:
+ * @error:
+ *
+ * Like g_file_open_tmp(), except the file will be created in the
+ * provided @tmpdir, and allows specification of the Unix @mode, which
+ * means private files may be created.  Return values will be stored
+ * in @out_file, and optionally @out_stream.
+ */
+gboolean
+gs_file_open_in_tmpdir (GFile             *tmpdir,
+                        int                mode,
+                        GFile            **out_file,
+                        GOutputStream    **out_stream,
+                        GCancellable      *cancellable,
+                        GError           **error)
+{
+  gboolean ret = FALSE;
+  const int max_attempts = 128;
+  guint i;
+  DIR *d;
+  int dfd;
+  char *tmp_name = NULL;
+  int fd;
+
+  d = opendir (gs_file_get_path_cached (tmpdir));
+  if (!d)
+    {
+      _set_error_from_errno (error);
+      goto out;
+    }
+  dfd = dirfd (d);
+  
+  /* 128 attempts seems reasonable... */
+  for (i = 0; i < max_attempts; i++)
+    {
+      g_free (tmp_name);
+      tmp_name = gsystem_fileutil_gen_tmp_name (NULL, NULL);
+
+      do
+        fd = openat (dfd, tmp_name, O_WRONLY | O_CREAT | O_EXCL, mode);
+      while (fd == -1 && errno == EINTR);
+      if (fd < 0 && errno != EEXIST)
+        {
+          _set_error_from_errno (error);
+          goto out;
+        }
+      break;
+    }
+  if (i == max_attempts)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Exhausted attempts to open temporary file");
+      goto out;
+    }
+
+  ret = TRUE;
+  *out_file = g_file_get_child (tmpdir, tmp_name);
+  if (out_stream)
+    *out_stream = g_unix_output_stream_new (fd, TRUE);
+ out:
+  return ret;
 }
 
 static gboolean

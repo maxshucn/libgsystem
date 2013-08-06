@@ -55,6 +55,13 @@ gboolean gs_file_sync_data (GFile          *file,
 char * gsystem_fileutil_gen_tmp_name (const char *prefix,
                                       const char *suffix);
 
+gboolean gs_file_open_in_tmpdir (GFile             *tmpdir,
+                                 int                mode,
+                                 GFile            **out_file,
+                                 GOutputStream    **out_stream,
+                                 GCancellable      *cancellable,
+                                 GError           **error);
+
 gboolean gs_file_create (GFile          *file,
                          int             mode,
                          GOutputStream **out_stream,
