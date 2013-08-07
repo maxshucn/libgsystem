@@ -454,8 +454,8 @@ gs_file_open_in_tmpdir (GFile             *tmpdir,
   gboolean ret = FALSE;
   const int max_attempts = 128;
   guint i;
-  DIR *d;
-  int dfd;
+  DIR *d = NULL;
+  int dfd = -1;
   char *tmp_name = NULL;
   int fd;
 
@@ -495,6 +495,7 @@ gs_file_open_in_tmpdir (GFile             *tmpdir,
   if (out_stream)
     *out_stream = g_unix_output_stream_new (fd, TRUE);
  out:
+  if (d) (void) closedir (d);
   return ret;
 }
 
