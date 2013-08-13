@@ -108,6 +108,12 @@ gs_local_variant_iter_free (void *loc)
 }
 
 void
+gs_local_variant_builder_free (void *loc)
+{
+  _gs_local_free(GVariantBuilder, g_variant_builder_free);
+}
+
+void
 gs_local_ptrarray_unref (void *loc)
 {
   _gs_local_free(GPtrArray, g_ptr_array_unref);
@@ -123,4 +129,10 @@ void
 gs_local_hashtable_unref (void *loc)
 {
   _gs_local_free(GHashTable, g_hash_table_unref);
+}
+
+void
+gs_local_checksum_free (void *loc)
+{
+  _gs_local_free(GChecksum, g_checksum_free);
 }

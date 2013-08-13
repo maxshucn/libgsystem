@@ -34,9 +34,11 @@ void gs_local_free (void *loc);
 void gs_local_obj_unref (void *loc);
 void gs_local_variant_unref (void *loc);
 void gs_local_variant_iter_free (void *loc);
+void gs_local_variant_builder_free (void *loc);
 void gs_local_array_unref (void *loc);
 void gs_local_ptrarray_unref (void *loc);
 void gs_local_hashtable_unref (void *loc);
+void gs_local_checksum_free (void *loc);
 
 /**
  * gs_free:
@@ -72,6 +74,14 @@ void gs_local_hashtable_unref (void *loc);
 #define gs_free_variant_iter __attribute__ ((cleanup(gs_local_variant_iter_free)))
 
 /**
+ * gs_free_variant_builder:
+ *
+ * Call g_variant_builder_free() on a variable location when it goes out of
+ * scope.
+ */
+#define gs_free_variant_builder __attribute__ ((cleanup(gs_local_variant_builder_free)))
+
+/**
  * gs_unref_array:
  *
  * Call g_array_unref() on a variable location when it goes out of
@@ -99,6 +109,15 @@ void gs_local_hashtable_unref (void *loc);
  * be %NULL.
  */
 #define gs_unref_hashtable __attribute__ ((cleanup(gs_local_hashtable_unref)))
+
+/**
+ * gs_free_checksum:
+ *
+ * Call g_checksum_free() on a variable location when it goes out
+ * of scope.  Note that unlike g_checksum_free(), the variable may
+ * be %NULL.
+ */
+#define gs_free_checksum __attribute__ ((cleanup(gs_local_free_checksum)))
 
 G_END_DECLS
 
