@@ -117,7 +117,7 @@ void gs_local_checksum_free (void *loc);
  * of scope.  Note that unlike g_checksum_free(), the variable may
  * be %NULL.
  */
-#define gs_free_checksum __attribute__ ((cleanup(gs_local_free_checksum)))
+#define gs_free_checksum __attribute__ ((cleanup(gs_local_checksum_free)))
 
 G_END_DECLS
 
