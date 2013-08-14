@@ -108,9 +108,9 @@ gs_local_variant_iter_free (void *loc)
 }
 
 void
-gs_local_variant_builder_free (void *loc)
+gs_local_variant_builder_unref (void *loc)
 {
-  _gs_local_free(GVariantBuilder, g_variant_builder_free);
+  _gs_local_free(GVariantBuilder, g_variant_builder_unref);
 }
 
 void

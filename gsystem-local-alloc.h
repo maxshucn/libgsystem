@@ -34,7 +34,7 @@ void gs_local_free (void *loc);
 void gs_local_obj_unref (void *loc);
 void gs_local_variant_unref (void *loc);
 void gs_local_variant_iter_free (void *loc);
-void gs_local_variant_builder_free (void *loc);
+void gs_local_variant_builder_unref (void *loc);
 void gs_local_array_unref (void *loc);
 void gs_local_ptrarray_unref (void *loc);
 void gs_local_hashtable_unref (void *loc);
@@ -76,10 +76,10 @@ void gs_local_checksum_free (void *loc);
 /**
  * gs_free_variant_builder:
  *
- * Call g_variant_builder_free() on a variable location when it goes out of
+ * Call g_variant_builder_unref() on a variable location when it goes out of
  * scope.
  */
-#define gs_free_variant_builder __attribute__ ((cleanup(gs_local_variant_builder_free)))
+#define gs_unref_variant_builder __attribute__ ((cleanup(gs_local_variant_builder_unref)))
 
 /**
  * gs_unref_array:
