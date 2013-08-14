@@ -136,3 +136,9 @@ gs_local_checksum_free (void *loc)
 {
   _gs_local_free(GChecksum, g_checksum_free);
 }
+
+void
+gs_local_bytes_unref (void *loc)
+{
+  _gs_local_free(GBytes, g_bytes_unref);
+}

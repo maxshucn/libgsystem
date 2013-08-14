@@ -39,6 +39,7 @@ void gs_local_array_unref (void *loc);
 void gs_local_ptrarray_unref (void *loc);
 void gs_local_hashtable_unref (void *loc);
 void gs_local_checksum_free (void *loc);
+void gs_local_bytes_unref (void *loc);
 
 /**
  * gs_free:
@@ -118,6 +119,15 @@ void gs_local_checksum_free (void *loc);
  * be %NULL.
  */
 #define gs_free_checksum __attribute__ ((cleanup(gs_local_checksum_free)))
+
+/**
+ * gs_unref_bytes:
+ *
+ * Call g_bytes_unref() on a variable location when it goes out
+ * of scope.  Note that unlike g_bytes_unref(), the variable may
+ * be %NULL.
+ */
+#define gs_unref_bytes __attribute__ ((cleanup(gs_local_bytes_unref)))
 
 G_END_DECLS
 
