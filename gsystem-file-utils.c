@@ -32,6 +32,7 @@
 #include "gsystem-glib-compat.h"
 #include <glib/gstdio.h>
 #include <gio/gunixinputstream.h>
+#include <gio/gfiledescriptorbased.h>
 #include <gio/gunixoutputstream.h>
 #include <glib-unix.h>
 #include <limits.h>
@@ -127,6 +128,44 @@ gs_file_read_noatime (GFile         *file,
     }
 
   return g_unix_input_stream_new (fd, TRUE);
+}
+
+/**
+ * gs_stream_fstat:
+ * @stream: A stream containing a Unix file descriptor
+ * @stbuf: Memory location to write stat buffer
+ * @cancellable:
+ * @error:
+ *
+ * Some streams created via libgsystem are #GUnixInputStream; these do
+ * not support e.g. g_file_input_stream_query_info().  This function
+ * allows dropping to the raw unix fstat() call for these types of
+ * streams, while still conveniently wrapped with the normal GLib
+ * handling of @cancellable and @error.
+ */
+gboolean
+gs_stream_fstat (GFileDescriptorBased *stream,
+                 struct stat          *stbuf,
+                 GCancellable         *cancellable,
+                 GError              **error)
+{
+  gboolean ret = FALSE;
+  int fd;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    goto out;
+
+  fd = g_file_descriptor_based_get_fd (stream);
+
+  if (fstat (fd, stbuf) == -1)
+    {
+      _set_error_from_errno (error);
+      goto out;
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
 }
 
 /**

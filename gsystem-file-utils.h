@@ -22,6 +22,7 @@
 #define __GSYSTEM_FILE_UTILS_H__
 
 #include <gio/gio.h>
+#include <sys/stat.h>
 
 G_BEGIN_DECLS
 
@@ -41,6 +42,13 @@ GInputStream *gs_file_read_noatime (GFile         *file,
 GMappedFile *gs_file_map_noatime (GFile         *file,
                                   GCancellable  *cancellable,
                                   GError       **error);
+
+#ifndef __GI_SCANNER__
+gboolean gs_stream_fstat (GFileDescriptorBased *stream,
+                          struct stat          *out_stbuf,
+                          GCancellable         *cancellable,
+                          GError              **error);
+#endif
 
 #if GLIB_CHECK_VERSION(2,34,0)
 GBytes *gs_file_map_readonly (GFile         *file,
