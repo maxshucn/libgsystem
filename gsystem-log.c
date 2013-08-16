@@ -132,8 +132,10 @@ gs_log_structured_print (const char *message,
 {
   gs_log_structured (message, keys);
 
+#ifdef ENABLE_SYSTEMD_JOURNAL
   if (!gs_stdout_is_journal ())
     g_print ("%s\n", message);
+#endif
 }
 
 /**
