@@ -26,6 +26,7 @@
 #endif
 
 #ifdef ENABLE_SYSTEMD_JOURNAL
+#define SD_JOURNAL_SUPPRESS_LOCATION
 #include <systemd/sd-journal.h>
 #endif
 #include <glib-unix.h>
@@ -71,9 +72,7 @@ gs_log_structured (const char *message,
     iovs[i].iov_len = strlen (msgkey);
     
     // The code location isn't useful since we're wrapping
-#define SD_JOURNAL_SUPPRESS_LOCATION
     sd_journal_sendv (iovs, n_opts);
-#undef SD_JOURNAL_SUPPRESS_LOCATION
     
     g_free (msgkey);
 #else
