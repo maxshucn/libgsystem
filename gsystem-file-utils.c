@@ -118,7 +118,14 @@ gs_file_read_noatime (GFile         *file,
 
   path = gs_file_get_path_cached (file);
   if (path == NULL)
-    return NULL;
+    {
+      char *uri;
+      uri = g_file_get_uri (file);
+      g_set_error (error, G_FILE_ERROR, G_FILE_ERROR_NOENT,
+                   "%s has no associated path", uri);
+      g_free (uri);
+      return NULL;
+    }
 
   fd = _open_fd_noatime (path);
   if (fd < 0)
