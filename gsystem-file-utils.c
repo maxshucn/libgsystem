@@ -1174,7 +1174,7 @@ gs_file_get_relpath (GFile *one,
   gchar *one_path, *one_suffix;
   gchar *two_path, *two_suffix;
   GString *path;
-  int index;
+  int i;
 
   simple_path = g_file_get_relative_path (one, two);
   if (simple_path)
@@ -1183,9 +1183,9 @@ gs_file_get_relpath (GFile *one,
   one_path = g_file_get_path (one);
   two_path = g_file_get_path (two);
 
-  index = path_common_directory (one_path, two_path);
-  one_suffix = one_path + index;
-  two_suffix = two_path + index;
+  i = path_common_directory (one_path, two_path);
+  one_suffix = one_path + i;
+  two_suffix = two_path + i;
 
   path = g_string_new ("");
 
