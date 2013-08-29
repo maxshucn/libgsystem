@@ -83,7 +83,7 @@ gs_local_free (void *loc)
     void **location = loc;                            \
     if (location)                                     \
       {                                               \
-        type *value = *location;                      \
+        type value = *location;                      \
         if (value)                                    \
           function (value);                           \
       }                                               \
@@ -92,55 +92,55 @@ gs_local_free (void *loc)
 void
 gs_local_obj_unref (void *loc)
 {
-  _gs_local_free(GObject, g_object_unref);
+  _gs_local_free(GObject*, g_object_unref);
 }
 
 void
 gs_local_variant_unref (void *loc)
 {
-  _gs_local_free(GVariant, g_variant_unref);
+  _gs_local_free(GVariant*, g_variant_unref);
 }
 
 void
 gs_local_variant_iter_free (void *loc)
 {
-  _gs_local_free(GVariantIter, g_variant_iter_free);
+  _gs_local_free(GVariantIter*, g_variant_iter_free);
 }
 
 void
 gs_local_variant_builder_unref (void *loc)
 {
-  _gs_local_free(GVariantBuilder, g_variant_builder_unref);
+  _gs_local_free(GVariantBuilder*, g_variant_builder_unref);
 }
 
 void
 gs_local_ptrarray_unref (void *loc)
 {
-  _gs_local_free(GPtrArray, g_ptr_array_unref);
+  _gs_local_free(GPtrArray*, g_ptr_array_unref);
 }
 
 void
 gs_local_array_unref (void *loc)
 {
-  _gs_local_free(GArray, g_array_unref);
+  _gs_local_free(GArray*, g_array_unref);
 }
 
 void
 gs_local_hashtable_unref (void *loc)
 {
-  _gs_local_free(GHashTable, g_hash_table_unref);
+  _gs_local_free(GHashTable*, g_hash_table_unref);
 }
 
 void
 gs_local_checksum_free (void *loc)
 {
-  _gs_local_free(GChecksum, g_checksum_free);
+  _gs_local_free(GChecksum*, g_checksum_free);
 }
 
 void
 gs_local_bytes_unref (void *loc)
 {
-  _gs_local_free(GBytes, g_bytes_unref);
+  _gs_local_free(GBytes*, g_bytes_unref);
 }
 
 void
