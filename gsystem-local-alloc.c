@@ -142,3 +142,9 @@ gs_local_bytes_unref (void *loc)
 {
   _gs_local_free(GBytes, g_bytes_unref);
 }
+
+void
+gs_local_strfreev (void *loc)
+{
+  _gs_local_free(char **, g_strfreev);
+}
