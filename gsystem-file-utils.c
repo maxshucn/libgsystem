@@ -937,6 +937,38 @@ gs_file_unlink (GFile          *path,
   return TRUE;
 }
 
+static gboolean
+chown_internal (GFile          *path,
+                gboolean        dereference_links,
+                guint32         owner,
+                guint32         group,
+                GCancellable   *cancellable,
+                GError        **error)
+{
+  gboolean ret = FALSE;
+  int res;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  do
+    if (dereference_links)
+      res = chown (gs_file_get_path_cached (path), owner, group);
+    else
+      res = lchown (gs_file_get_path_cached (path), owner, group);
+  while (G_UNLIKELY (res != 0 && errno == EINTR));
+
+  if (res < 0)
+    {
+      _set_error_from_errno (error);
+      goto out;
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
 /**
  * gs_file_chown:
  * @path: Path to file
@@ -956,25 +988,29 @@ gs_file_chown (GFile          *path,
                GCancellable   *cancellable,
                GError        **error)
 {
-  gboolean ret = FALSE;
-  int res;
+  return chown_internal (path, TRUE, owner, group, cancellable, error);
+}
 
-  if (g_cancellable_set_error_if_cancelled (cancellable, error))
-    return FALSE;
-
-  do
-    res = chown (gs_file_get_path_cached (path), owner, group);
-  while (G_UNLIKELY (res != 0 && errno == EINTR));
-
-  if (res < 0)
-    {
-      _set_error_from_errno (error);
-      goto out;
-    }
-
-  ret = TRUE;
- out:
-  return ret;
+/**
+ * gs_file_lchown:
+ * @path: Path to file
+ * @owner: UNIX owner
+ * @group: UNIX group
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * Merely wraps UNIX lchown().
+ *
+ * Returns: %TRUE on success, %FALSE on error
+ */
+gboolean
+gs_file_lchown (GFile          *path,
+                guint32         owner,
+                guint32         group,
+                GCancellable   *cancellable,
+                GError        **error)
+{
+  return chown_internal (path, FALSE, owner, group, cancellable, error);
 }
 
 /**
