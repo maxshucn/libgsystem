@@ -476,6 +476,92 @@ gsystem_fileutil_gen_tmp_name (const char *prefix,
 }
 
 /**
+ * gs_file_open_dir_fd:
+ * @path: Directory name
+ * @out_fd: (out): File descriptor for directory
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * On success, sets @out_fd to a file descriptor for the directory
+ * that can be used with UNIX functions such as openat().
+ */
+gboolean
+gs_file_open_dir_fd (GFile         *path,
+                     int           *out_fd,
+                     GCancellable  *cancellable,
+                     GError       **error)
+{
+  /* Linux specific probably */
+  *out_fd = open (gs_file_get_path_cached (path), O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC);
+  if (*out_fd == -1)
+    {
+      _set_error_from_errno (error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
+/**
+ * gs_file_open_in_tmpdir_at:
+ * @tmpdir_fd: Directory to place temporary file
+ * @mode: Default mode (will be affected by umask)
+ * @out_name: (out) (transfer full): Newly created file name
+ * @out_stream: (out) (transfer full) (allow-none): Newly created output stream
+ * @cancellable:
+ * @error:
+ *
+ * Like g_file_open_tmp(), except the file will be created in the
+ * provided @tmpdir, and allows specification of the Unix @mode, which
+ * means private files may be created.  Return values will be stored
+ * in @out_name, and optionally @out_stream.
+ */
+gboolean
+gs_file_open_in_tmpdir_at (int                tmpdir_fd,
+                           int                mode,
+                           char             **out_name,
+                           GOutputStream    **out_stream,
+                           GCancellable      *cancellable,
+                           GError           **error)
+{
+  gboolean ret = FALSE;
+  const int max_attempts = 128;
+  guint i;
+  char *tmp_name = NULL;
+  int fd;
+
+  /* 128 attempts seems reasonable... */
+  for (i = 0; i < max_attempts; i++)
+    {
+      g_free (tmp_name);
+      tmp_name = gsystem_fileutil_gen_tmp_name (NULL, NULL);
+
+      do
+        fd = openat (tmpdir_fd, tmp_name, O_WRONLY | O_CREAT | O_EXCL, mode);
+      while (fd == -1 && errno == EINTR);
+      if (fd < 0 && errno != EEXIST)
+        {
+          _set_error_from_errno (error);
+          goto out;
+        }
+      break;
+    }
+  if (i == max_attempts)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Exhausted attempts to open temporary file");
+      goto out;
+    }
+
+  ret = TRUE;
+  gs_transfer_out_value (out_name, &tmp_name);
+  if (out_stream)
+    *out_stream = g_unix_output_stream_new (fd, TRUE);
+ out:
+  g_free (tmp_name);
+  return ret;
+}
+
+/**
  * gs_file_open_in_tmpdir:
  * @tmpdir: Directory to place temporary file
  * @mode: Default mode (will be affected by umask)
@@ -498,12 +584,10 @@ gs_file_open_in_tmpdir (GFile             *tmpdir,
                         GError           **error)
 {
   gboolean ret = FALSE;
-  const int max_attempts = 128;
-  guint i;
   DIR *d = NULL;
   int dfd = -1;
   char *tmp_name = NULL;
-  int fd;
+  GOutputStream *ret_stream = NULL;
 
   d = opendir (gs_file_get_path_cached (tmpdir));
   if (!d)
@@ -512,36 +596,19 @@ gs_file_open_in_tmpdir (GFile             *tmpdir,
       goto out;
     }
   dfd = dirfd (d);
-  
-  /* 128 attempts seems reasonable... */
-  for (i = 0; i < max_attempts; i++)
-    {
-      g_free (tmp_name);
-      tmp_name = gsystem_fileutil_gen_tmp_name (NULL, NULL);
 
-      do
-        fd = openat (dfd, tmp_name, O_WRONLY | O_CREAT | O_EXCL, mode);
-      while (fd == -1 && errno == EINTR);
-      if (fd < 0 && errno != EEXIST)
-        {
-          _set_error_from_errno (error);
-          goto out;
-        }
-      break;
-    }
-  if (i == max_attempts)
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Exhausted attempts to open temporary file");
-      goto out;
-    }
-
+  if (!gs_file_open_in_tmpdir_at (dfd, mode, &tmp_name,
+                                  out_stream ? &ret_stream : NULL,
+                                  cancellable, error))
+    goto out;
+ 
   ret = TRUE;
   *out_file = g_file_get_child (tmpdir, tmp_name);
-  if (out_stream)
-    *out_stream = g_unix_output_stream_new (fd, TRUE);
+  gs_transfer_out_value (out_stream, &ret_stream);
  out:
   if (d) (void) closedir (d);
+  g_clear_object (&ret_stream);
+  g_free (tmp_name);
   return ret;
 }
 
