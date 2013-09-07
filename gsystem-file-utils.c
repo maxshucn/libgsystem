@@ -68,29 +68,56 @@ open_nointr (const char *path, int flags, mode_t mode)
   return res;
 }
 
-static int
-_open_fd_noatime (const char *path)
-{
-  int fd;
-
-#ifdef O_NOATIME
-  fd = open_nointr (path, O_RDONLY | O_NOATIME, 0);
-  /* Only the owner or superuser may use O_NOATIME; so we may get
-   * EPERM.  EINVAL may happen if the kernel is really old...
-   */
-  if (fd == -1 && (errno == EPERM || errno == EINVAL))
-#endif
-    fd = open_nointr (path, O_RDONLY, 0);
-  
-  return fd;
-}
-
 static inline void
 _set_error_from_errno (GError **error)
 {
   int errsv = errno;
   g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
                        g_strerror (errsv));
+}
+
+/**
+ * gs_file_openat_noatime:
+ * @dfd: File descriptor for directory
+ * @name: Pathname, relative to @dfd
+ * @ret_fd: (out): Returned file descriptor
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Wrapper for openat() using %O_RDONLY with %O_NOATIME if available.
+ */
+gboolean
+gs_file_openat_noatime (int            dfd,
+                        const char    *name,
+                        int           *ret_fd,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+  int fd;
+
+#ifdef O_NOATIME
+  do
+    fd = openat (dfd, name, O_RDONLY | O_NOATIME, 0);
+  while (G_UNLIKELY (fd == -1 && errno == EINTR));
+  /* Only the owner or superuser may use O_NOATIME; so we may get
+   * EPERM.  EINVAL may happen if the kernel is really old...
+   */
+  if (fd == -1 && (errno == EPERM || errno == EINVAL))
+#endif
+    do
+      fd = openat (dfd, name, O_RDONLY, 0);
+    while (G_UNLIKELY (fd == -1 && errno == EINTR));
+  
+  if (fd == -1)
+    {
+      _set_error_from_errno (error);
+      return FALSE;
+    }
+  else
+    {
+      *ret_fd = fd;
+      return TRUE;
+    }
 }
 
 /**
@@ -127,12 +154,8 @@ gs_file_read_noatime (GFile         *file,
       return NULL;
     }
 
-  fd = _open_fd_noatime (path);
-  if (fd < 0)
-    {
-      _set_error_from_errno (error);
-      return NULL;
-    }
+  if (!gs_file_openat_noatime (AT_FDCWD, path, &fd, cancellable, error))
+    return NULL;
 
   return g_unix_input_stream_new (fd, TRUE);
 }
@@ -203,12 +226,8 @@ gs_file_map_noatime (GFile         *file,
   if (path == NULL)
     return NULL;
 
-  fd = _open_fd_noatime (path);
-  if (fd < 0)
-    {
-      _set_error_from_errno (error);
-      return NULL;
-    }
+  if (!gs_file_openat_noatime (AT_FDCWD, path, &fd, cancellable, error))
+    return NULL;
   
   ret = g_mapped_file_new_from_fd (fd, FALSE, error);
   close_nointr_noerror (fd); /* Ignore errors - we always want to close */
@@ -267,12 +286,9 @@ gs_file_sync_data (GFile          *file,
   int res;
   int fd = -1; 
 
-  fd = _open_fd_noatime (gs_file_get_path_cached (file));
-  if (fd < 0)
-    {
-      _set_error_from_errno (error);
-      goto out;
-    }
+  if (!gs_file_openat_noatime (AT_FDCWD, gs_file_get_path_cached (file), &fd,
+                               cancellable, error))
+    goto out;
 
   do
     res = fdatasync (fd);

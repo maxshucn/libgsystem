@@ -36,6 +36,12 @@ gboolean gs_file_enumerator_iterate (GFileEnumerator  *direnum,
                                      GCancellable     *cancellable,
                                      GError          **error);
 
+gboolean gs_file_openat_noatime (int            dirfd,
+                                 const char    *name,
+                                 int           *out_fd,
+                                 GCancellable  *cancellable,
+                                 GError       **error);
+
 GInputStream *gs_file_read_noatime (GFile         *file,
                                     GCancellable  *cancellable,
                                     GError       **error);
@@ -48,6 +54,7 @@ gboolean gs_stream_fstat (GFileDescriptorBased *stream,
                           struct stat          *out_stbuf,
                           GCancellable         *cancellable,
                           GError              **error);
+
 #endif
 
 #if GLIB_CHECK_VERSION(2,34,0)
