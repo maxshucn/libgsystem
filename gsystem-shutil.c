@@ -362,7 +362,7 @@ gs_shutil_rm_rf (GFile        *path,
         {
           ;
         }
-      else if (errsv == ENOTDIR)
+      else if (errsv == ENOTDIR || errsv == ELOOP)
         {
           if (!gs_file_unlink (path, cancellable, error))
             goto out;
