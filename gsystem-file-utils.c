@@ -444,12 +444,24 @@ get_default_tmp_prefix (void)
       const char *prgname = g_get_prgname ();
       const char *p;
       char *prefix;
+      char *iter;
 
-      p = strrchr (prgname, '/');
-      if (p)
-        prgname = p + 1;
-
+      if (prgname)
+        {
+          p = strrchr (prgname, '/');
+          if (p)
+            prgname = p + 1;
+        }
+      else
+        prgname = "";
+          
       prefix = g_strdup_printf ("tmp-%s%u-", prgname, getuid ());
+      for (iter = prefix; *iter; iter++)
+        {
+          char c = *iter;
+          if (c == ' ')
+            *iter = '_';
+        }
       
       g_once_init_leave (&tmpprefix, prefix);
     }
