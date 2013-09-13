@@ -95,14 +95,6 @@ gboolean gs_file_create (GFile          *file,
                          GCancellable   *cancellable,
                          GError        **error);
 
-gboolean gs_file_create_with_uidgid (GFile          *file,
-                                     int             mode,
-                                     uid_t           uid,
-                                     gid_t           gid,
-                                     GOutputStream **out_stream,
-                                     GCancellable   *cancellable,
-                                     GError        **error);
-
 gboolean gs_file_linkcopy (GFile          *src,
                            GFile          *dest,
                            GFileCopyFlags  flags,
