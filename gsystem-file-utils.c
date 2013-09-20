@@ -762,6 +762,23 @@ gs_file_linkcopy_sync_data (GFile          *src,
   return linkcopy_internal (src, dest, flags, TRUE, cancellable, error);
 }
 
+static char *
+gs_file_get_target_path (GFile *file)
+{
+  GFileInfo *info;
+  const char *target;
+  char *path;
+
+  info = g_file_query_info (file, G_FILE_ATTRIBUTE_STANDARD_TARGET_URI, G_FILE_QUERY_INFO_NONE, NULL, NULL);
+  if (info == NULL)
+    return NULL;
+  target = g_file_info_get_attribute_string (info, G_FILE_ATTRIBUTE_STANDARD_TARGET_URI);
+  path = g_filename_from_uri (target, NULL, NULL);
+  g_object_unref (info);
+
+  return path;
+}
+
 G_LOCK_DEFINE_STATIC (pathname_cache);
 
 /**
@@ -784,8 +801,13 @@ gs_file_get_path_cached (GFile *file)
   path = g_object_get_qdata ((GObject*)file, _file_path_quark);
   if (!path)
     {
-      path = g_file_get_path (file);
-      g_assert (path != NULL);
+      if (g_file_has_uri_scheme (file, "trash") ||
+          g_file_has_uri_scheme (file, "recent"))
+        path = gs_file_get_target_path (file);
+      else
+        path = g_file_get_path (file);
+      if (path == NULL)
+        return NULL;
       g_object_set_qdata_full ((GObject*)file, _file_path_quark, (char*)path, (GDestroyNotify)g_free);
     }
 
