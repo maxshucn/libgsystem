@@ -809,7 +809,10 @@ gs_file_get_path_cached (GFile *file)
       else
         path = g_file_get_path (file);
       if (path == NULL)
-        return NULL;
+        {
+          G_UNLOCK (pathname_cache);
+          return NULL;
+        }
       g_object_set_qdata_full ((GObject*)file, _file_path_quark, (char*)path, (GDestroyNotify)g_free);
     }
 
