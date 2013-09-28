@@ -508,6 +508,8 @@ gs_file_open_in_tmpdir_at (int                tmpdir_fd,
   gs_transfer_out_value (out_name, &tmp_name);
   if (out_stream)
     *out_stream = g_unix_output_stream_new (fd, TRUE);
+  else
+    (void) close (fd);
  out:
   g_free (tmp_name);
   return ret;
