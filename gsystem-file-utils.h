@@ -36,9 +36,9 @@ gboolean gs_file_enumerator_iterate (GFileEnumerator  *direnum,
                                      GCancellable     *cancellable,
                                      GError          **error);
 
-gboolean gs_file_openat_noatime (int            dirfd,
+gboolean gs_file_openat_noatime (int            dfd,
                                  const char    *name,
-                                 int           *out_fd,
+                                 int           *ret_fd,
                                  GCancellable  *cancellable,
                                  GError       **error);
 
@@ -75,7 +75,7 @@ gboolean gs_file_open_dir_fd (GFile         *path,
                               GCancellable  *cancellable,
                               GError       **error);
 
-gboolean gs_file_open_in_tmpdir_at (int                dirfd,
+gboolean gs_file_open_in_tmpdir_at (int                tmpdir_fd,
                                     int                mode,
                                     char             **out_name,
                                     GOutputStream    **out_stream,

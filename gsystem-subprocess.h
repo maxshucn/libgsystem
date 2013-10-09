@@ -74,7 +74,7 @@ gboolean         gs_subprocess_request_exit (GSSubprocess       *self);
 
 void             gs_subprocess_force_exit (GSSubprocess       *self);
 
-/** High level helpers **/
+/**** High level helpers ****/
 
 GSSubprocess *    gs_subprocess_new_simple_argl (GSSubprocessStreamDisposition   stdout_disposition,
                                                  GSSubprocessStreamDisposition   stderr_disposition,
