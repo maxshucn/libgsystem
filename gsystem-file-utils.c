@@ -394,7 +394,7 @@ get_default_tmp_prefix (void)
 }
 
 /**
- * gsystem_fileutil_gen_tmp_name:
+ * gs_fileutil_gen_tmp_name:
  * @prefix: (allow-none): String prepended to the result
  * @suffix: (allow-none): String suffixed to the result
  *
@@ -403,8 +403,8 @@ get_default_tmp_prefix (void)
  * name does not exist.
  */
 char *
-gsystem_fileutil_gen_tmp_name (const char *prefix,
-                               const char *suffix)
+gs_fileutil_gen_tmp_name (const char *prefix,
+                          const char *suffix)
 {
   static const char table[] = "ABCEDEFGHIJKLMNOPQRSTUVWXYZabcedefghijklmnopqrstuvwxyz0123456789";
   GString *str = g_string_new ("");
@@ -485,7 +485,7 @@ gs_file_open_in_tmpdir_at (int                tmpdir_fd,
   for (i = 0; i < max_attempts; i++)
     {
       g_free (tmp_name);
-      tmp_name = gsystem_fileutil_gen_tmp_name (NULL, NULL);
+      tmp_name = gs_fileutil_gen_tmp_name (NULL, NULL);
 
       do
         fd = openat (tmpdir_fd, tmp_name, O_WRONLY | O_CREAT | O_EXCL, mode);
@@ -585,7 +585,7 @@ linkcopy_internal_attempt (GFile          *src,
   if (g_cancellable_set_error_if_cancelled (cancellable, error))
     goto out;
 
-  tmp_name = gsystem_fileutil_gen_tmp_name (NULL, NULL);
+  tmp_name = gs_fileutil_gen_tmp_name (NULL, NULL);
   tmp_dest = g_file_get_child (dest_parent, tmp_name);
 
   res = link (gs_file_get_path_cached (src), gs_file_get_path_cached (tmp_dest));

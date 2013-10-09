@@ -67,8 +67,8 @@ gboolean gs_file_sync_data (GFile          *file,
                             GCancellable   *cancellable,
                             GError        **error);
 
-char * gsystem_fileutil_gen_tmp_name (const char *prefix,
-                                      const char *suffix);
+char * gs_fileutil_gen_tmp_name (const char *prefix,
+                                 const char *suffix);
 
 gboolean gs_file_open_dir_fd (GFile         *path,
                               int           *out_fd,
