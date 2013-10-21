@@ -381,7 +381,7 @@ gs_console_begin_status_line (GSConsole     *console,
   /* Now we need to pad with spaces enough to overwrite our last line
    */
   if (console->last_line_written >= 0
-      && linelen < console->last_line_written)
+      && linelen < (gsize) console->last_line_written)
     {
       gsize towrite = console->last_line_written - linelen;
       const char c = ' ';

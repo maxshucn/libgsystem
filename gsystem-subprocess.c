@@ -292,7 +292,7 @@ static void
 child_setup (gpointer user_data)
 {
   ChildData *child_data = user_data;
-  gint i;
+  guint i;
   gint result;
 
   /* We're on the child side now.  "Rename" the file descriptors in
@@ -304,7 +304,7 @@ child_setup (gpointer user_data)
    */
   for (i = 0; i < 3; i++)
     {
-      if (child_data->fds[i] != -1 && child_data->fds[i] != i)
+      if (child_data->fds[i] != -1 && child_data->fds[i] != (int) i)
         {
           do
             result = dup2 (child_data->fds[i], i);
@@ -345,7 +345,7 @@ initable_init (GInitable     *initable,
   gint close_fds[3] = { -1, -1, -1 };
   GSpawnFlags spawn_flags = 0;
   gboolean success = FALSE;
-  gint i;
+  guint i;
 
   if (g_cancellable_set_error_if_cancelled (cancellable, error))
     return FALSE;

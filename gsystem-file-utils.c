@@ -477,7 +477,7 @@ gs_file_open_in_tmpdir_at (int                tmpdir_fd,
 {
   gboolean ret = FALSE;
   const int max_attempts = 128;
-  guint i;
+  int i;
   char *tmp_name = NULL;
   int fd;
 
