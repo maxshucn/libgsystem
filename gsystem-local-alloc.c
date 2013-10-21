@@ -148,3 +148,9 @@ gs_local_strfreev (void *loc)
 {
   _gs_local_free(char **, g_strfreev);
 }
+
+void
+gs_local_free_error (void *loc)
+{
+  _gs_local_free(GError*, g_error_free);
+}

@@ -41,6 +41,7 @@ void gs_local_hashtable_unref (void *loc);
 void gs_local_checksum_free (void *loc);
 void gs_local_bytes_unref (void *loc);
 void gs_local_strfreev (void *loc);
+void gs_local_free_error (void *loc);
 
 /**
  * gs_free:
@@ -136,6 +137,13 @@ void gs_local_strfreev (void *loc);
  * Call g_strfreev() on a variable location when it goes out of scope.
  */
 #define gs_strfreev __attribute__ ((cleanup(gs_local_strfreev)))
+
+/**
+ * gs_free_error:
+ *
+ * Call g_error_free() on a variable location when it goes out of scope.
+ */
+#define gs_free_error __attribute__ ((cleanup(gs_local_free_error)))
 
 G_END_DECLS
 
