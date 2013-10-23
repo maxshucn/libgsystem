@@ -25,23 +25,37 @@
 
 G_BEGIN_DECLS
 
+#define GS_DEFINE_CLEANUP_FUNCTION(Type, name, func) \
+  static inline void name (void *v) \
+  { \
+    func (*(Type*)v); \
+  }
+
+#define GS_DEFINE_CLEANUP_FUNCTION0(Type, name, func) \
+  static inline void name (void *v) \
+  { \
+    if (*(Type*)v) \
+      func (*(Type*)v); \
+  }
+
 /* These functions shouldn't be invoked directly;
  * they are stubs that:
  * 1) Take a pointer to the location (typically itself a pointer).
  * 2) Provide %NULL-safety where it doesn't exist already (e.g. g_object_unref)
  */
-void gs_local_free (void *loc);
-void gs_local_obj_unref (void *loc);
-void gs_local_variant_unref (void *loc);
-void gs_local_variant_iter_free (void *loc);
-void gs_local_variant_builder_unref (void *loc);
-void gs_local_array_unref (void *loc);
-void gs_local_ptrarray_unref (void *loc);
-void gs_local_hashtable_unref (void *loc);
-void gs_local_checksum_free (void *loc);
-void gs_local_bytes_unref (void *loc);
-void gs_local_strfreev (void *loc);
-void gs_local_free_error (void *loc);
+GS_DEFINE_CLEANUP_FUNCTION0(GArray*, gs_local_array_unref, g_array_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GBytes*, gs_local_bytes_unref, g_bytes_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GChecksum*, gs_local_checksum_free, g_checksum_free)
+GS_DEFINE_CLEANUP_FUNCTION0(GError*, gs_local_free_error, g_error_free)
+GS_DEFINE_CLEANUP_FUNCTION0(GHashTable*, gs_local_hashtable_unref, g_hash_table_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GObject*, gs_local_obj_unref, g_object_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GPtrArray*, gs_local_ptrarray_unref, g_ptr_array_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GVariant*, gs_local_variant_unref, g_variant_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GVariantBuilder*, gs_local_variant_builder_unref, g_variant_builder_unref)
+GS_DEFINE_CLEANUP_FUNCTION0(GVariantIter*, gs_local_variant_iter_free, g_variant_iter_free)
+
+GS_DEFINE_CLEANUP_FUNCTION(char**, gs_local_strfreev, g_strfreev)
+GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 
 /**
  * gs_free:
