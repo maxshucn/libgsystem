@@ -81,6 +81,16 @@ cp_internal_one_item (GFile         *src,
           goto out;
         }
 
+      if (chown (gs_file_get_path_cached (dest_child),
+                 g_file_info_get_attribute_uint32 (file_info, "unix::uid"),
+                 g_file_info_get_attribute_uint32 (file_info, "unix::gid")) == -1)
+        {
+          int errsv = errno;
+          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                               g_strerror (errsv));
+          goto out;
+        }
+
       if (!cp_internal (src_child, dest_child, use_hardlinks, cancellable, error))
         goto out;
     }
@@ -132,7 +142,7 @@ cp_internal (GFile         *src,
   GFileInfo *file_info = NULL;
   GError *temp_error = NULL;
 
-  enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::mode",
+  enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::uid,unix::gid,unix::mode",
                                           G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
                                           cancellable, error);
   if (!enumerator)
