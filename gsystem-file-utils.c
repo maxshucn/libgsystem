@@ -495,7 +495,8 @@ gs_file_open_in_tmpdir_at (int                tmpdir_fd,
           _set_error_from_errno (error);
           goto out;
         }
-      break;
+      else if (fd != -1)
+        break;
     }
   if (i == max_attempts)
     {
