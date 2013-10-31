@@ -345,6 +345,7 @@ gs_file_create (GFile          *file,
 
   if (fchmod (fd, mode) < 0)
     {
+      close (fd);
       _set_error_from_errno (error);
       goto out;
     }
