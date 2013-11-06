@@ -957,8 +957,7 @@ gs_subprocess_simple_run_sync (const char                    *cwd,
 
   ret = TRUE;
  out:
-  if (context)
-    g_object_unref (context);
+  g_object_unref (context);
   if (proc)
     g_object_unref (proc);
   return ret;
