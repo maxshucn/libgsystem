@@ -40,107 +40,57 @@ union dirent_storage {
                         ((NAME_MAX + 1 + sizeof(long)) & ~(sizeof(long) - 1))];
 };
 
-static gboolean
-cp_internal (GFile         *src,
-             GFile         *dest,
-             gboolean       use_hardlinks,
-             GCancellable  *cancellable,
-             GError       **error);
+static inline void
+_set_error_from_errno (GError **error)
+{
+  int errsv = errno;
+  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                       g_strerror (errsv));
+}
 
 static gboolean
-cp_internal_one_item (GFile         *src,
-                      GFile         *dest,
-                      GFileInfo     *file_info,
-                      gboolean       use_hardlinks,
-                      GCancellable  *cancellable,
-                      GError       **error)
+copy_xattrs_from_file_to_fd (GFile         *src,
+                             int            dest_fd,
+                             GCancellable  *cancellable,
+                             GError       **error)
 {
   gboolean ret = FALSE;
-  const char *name = g_file_info_get_name (file_info);
-  GFile *src_child = g_file_get_child (src, name);
-  GFile *dest_child = g_file_get_child (dest, name);
+  GVariant *src_xattrs = NULL;
 
-  if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
+  if (!gs_file_get_all_xattrs (src, &src_xattrs, cancellable, error))
+    goto out;
+
+  if (src_xattrs)
     {
-      if (!gs_file_ensure_directory (dest_child, FALSE, cancellable, error))
+      if (!gs_fd_set_all_xattrs (dest_fd, src_xattrs, cancellable, error))
         goto out;
-
-      /* Can't do this even though we'd like to; it fails with an error about
-       * setting standard::type not being supported =/
-       *
-       if (!g_file_set_attributes_from_info (dest_child, file_info, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-       cancellable, error))
-       goto out;
-      */
-      if (chmod (gs_file_get_path_cached (dest_child),
-                 g_file_info_get_attribute_uint32 (file_info, "unix::mode")) == -1)
-        {
-          int errsv = errno;
-          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               g_strerror (errsv));
-          goto out;
-        }
-
-      if (chown (gs_file_get_path_cached (dest_child),
-                 g_file_info_get_attribute_uint32 (file_info, "unix::uid"),
-                 g_file_info_get_attribute_uint32 (file_info, "unix::gid")) == -1)
-        {
-          int errsv = errno;
-          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               g_strerror (errsv));
-          goto out;
-        }
-
-      if (!cp_internal (src_child, dest_child, use_hardlinks, cancellable, error))
-        goto out;
-    }
-  else
-    {
-      gboolean did_link = FALSE;
-      (void) unlink (gs_file_get_path_cached (dest_child));
-      if (use_hardlinks)
-        {
-          if (link (gs_file_get_path_cached (src_child), gs_file_get_path_cached (dest_child)) == -1)
-            {
-              if (!(errno == EMLINK || errno == EXDEV))
-                {
-                  int errsv = errno;
-                  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                       g_strerror (errsv));
-                  goto out;
-                }
-              use_hardlinks = FALSE;
-            }
-          else
-            did_link = TRUE;
-        }
-      if (!did_link)
-        {
-          if (!g_file_copy (src_child, dest_child,
-                            G_FILE_COPY_OVERWRITE | G_FILE_COPY_ALL_METADATA | G_FILE_COPY_NOFOLLOW_SYMLINKS,
-                            cancellable, NULL, NULL, error))
-            goto out;
-        }
     }
 
   ret = TRUE;
  out:
-  g_clear_object (&src_child);
-  g_clear_object (&dest_child);
+  g_clear_pointer (&src_xattrs, g_variant_unref);
   return ret;
 }
+
+typedef enum {
+  GS_CP_MODE_NONE,
+  GS_CP_MODE_HARDLINK,
+  GS_CP_MODE_COPY_ALL
+} GsCpMode;
 
 static gboolean
 cp_internal (GFile         *src,
              GFile         *dest,
-             gboolean       use_hardlinks,
+             GsCpMode       mode,
              GCancellable  *cancellable,
              GError       **error)
 {
   gboolean ret = FALSE;
   GFileEnumerator *enumerator = NULL;
-  GFileInfo *file_info = NULL;
-  GError *temp_error = NULL;
+  GFileInfo *src_info = NULL;
+  GFile *dest_child = NULL;
+  int dest_dfd = -1;
+  int r;
 
   enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::uid,unix::gid,unix::mode",
                                           G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
@@ -148,26 +98,115 @@ cp_internal (GFile         *src,
   if (!enumerator)
     goto out;
 
-  if (!gs_file_ensure_directory (dest, FALSE, cancellable, error))
+  src_info = g_file_query_info (src, "standard::name,unix::mode,unix::uid,unix::gid," \
+                                "time::modified,time::modified-usec,time::access,time::access-usec",
+                                G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                cancellable, error);
+  if (!src_info)
     goto out;
 
-  while ((file_info = g_file_enumerator_next_file (enumerator, cancellable, &temp_error)) != NULL)
+  do
+    r = mkdir (gs_file_get_path_cached (dest), 0755);
+  while (G_UNLIKELY (r == -1 && errno == EINTR));
+  if (r == -1)
     {
-      if (!cp_internal_one_item (src, dest, file_info, use_hardlinks,
-                                 cancellable, error))
-        goto out;
-      g_clear_object (&file_info);
-    }
-  if (temp_error)
-    {
-      g_propagate_error (error, temp_error);
+      _set_error_from_errno (error);
       goto out;
+    }
+
+  if (mode != GS_CP_MODE_NONE)
+    {
+      if (!gs_file_open_dir_fd (dest, &dest_dfd,
+                                cancellable, error))
+        goto out;
+
+      do
+        r = fchown (dest_dfd,
+                    g_file_info_get_attribute_uint32 (src_info, "unix::uid"),
+                    g_file_info_get_attribute_uint32 (src_info, "unix::gid"));
+      while (G_UNLIKELY (r == -1 && errno == EINTR));
+      if (r == -1)
+        {
+          _set_error_from_errno (error);
+          goto out;
+        }
+
+      do
+        r = fchmod (dest_dfd, g_file_info_get_attribute_uint32 (src_info, "unix::mode"));
+      while (G_UNLIKELY (r == -1 && errno == EINTR));
+
+      if (!copy_xattrs_from_file_to_fd (src, dest_dfd, cancellable, error))
+        goto out;
+
+      if (dest_dfd != -1)
+        {
+          (void) close (dest_dfd);
+          dest_dfd = -1;
+        }
+    }
+
+  while (TRUE)
+    {
+      GFileInfo *file_info = NULL;
+      GFile *src_child = NULL;
+
+      if (!gs_file_enumerator_iterate (enumerator, &file_info, &src_child,
+                                       cancellable, error))
+        goto out;
+      if (!file_info)
+        break;
+
+      if (dest_child) g_object_unref (dest_child);
+      dest_child = g_file_get_child (dest, g_file_info_get_name (file_info));
+
+      if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
+        {
+          if (!cp_internal (src_child, dest_child, mode,
+                            cancellable, error))
+            goto out;
+        }
+      else
+        {
+          gboolean did_link = FALSE;
+          (void) unlink (gs_file_get_path_cached (dest_child));
+          if (mode == GS_CP_MODE_HARDLINK)
+            {
+              if (link (gs_file_get_path_cached (src_child), gs_file_get_path_cached (dest_child)) == -1)
+                {
+                  if (!(errno == EMLINK || errno == EXDEV))
+                    {
+                      int errsv = errno;
+                      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                                           g_strerror (errsv));
+                      goto out;
+                    }
+                  /* We failed to hardlink; fall back to copying all; this will
+                   * affect subsequent directory copies too.
+                   */
+                  mode = GS_CP_MODE_COPY_ALL;
+                }
+              else
+                did_link = TRUE;
+            }
+          if (!did_link)
+            {
+              GFileCopyFlags copyflags = G_FILE_COPY_OVERWRITE | G_FILE_COPY_NOFOLLOW_SYMLINKS;
+              if (mode == GS_CP_MODE_COPY_ALL)
+                copyflags |= G_FILE_COPY_ALL_METADATA;
+              if (!g_file_copy (src_child, dest_child, copyflags,
+                                cancellable, NULL, NULL, error))
+                goto out;
+            }
+        }
     }
 
   ret = TRUE;
  out:
+  if (dest_dfd != -1)
+    (void) close (dest_dfd);
+  g_clear_object (&src_info);
   g_clear_object (&enumerator);
-  g_clear_object (&file_info);
+  g_clear_object (&dest_child);
   return ret;
 }
 
@@ -191,7 +230,8 @@ gs_shutil_cp_al_or_fallback (GFile         *src,
                              GCancellable  *cancellable,
                              GError       **error)
 {
-  return cp_internal (src, dest, TRUE, cancellable, error);
+  return cp_internal (src, dest, GS_CP_MODE_HARDLINK,
+                      cancellable, error);
 }
 
 /**
@@ -212,7 +252,8 @@ gs_shutil_cp_a (GFile         *src,
                 GCancellable  *cancellable,
                 GError       **error)
 {
-  return cp_internal (src, dest, FALSE, cancellable, error);
+  return cp_internal (src, dest, GS_CP_MODE_COPY_ALL,
+                      cancellable, error);
 }
 
 static unsigned char

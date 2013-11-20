@@ -152,6 +152,21 @@ gchar *gs_file_get_relpath (GFile *one,
 
 GFile * gs_file_realpath (GFile *file);
 
+gboolean gs_file_get_all_xattrs (GFile         *f,
+                                 GVariant     **out_xattrs,
+                                 GCancellable  *cancellable,
+                                 GError       **error);
+
+gboolean gs_fd_set_all_xattrs (int            fd,
+                               GVariant      *xattrs,
+                               GCancellable  *cancellable,
+                               GError       **error);
+
+gboolean gs_file_set_all_xattrs (GFile         *file,
+                                 GVariant      *xattrs,
+                                 GCancellable  *cancellable,
+                                 GError       **error);
+
 G_END_DECLS
 
 #endif

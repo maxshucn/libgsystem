@@ -37,6 +37,9 @@
 #include <glib-unix.h>
 #include <limits.h>
 #include <dirent.h>
+#ifdef GSYSTEM_CONFIG_XATTRS
+#include <attr/xattr.h>
+#endif
 
 static int
 close_nointr (int fd)
@@ -1338,4 +1341,280 @@ gs_file_realpath (GFile *file)
 
   g_free (path);
   return g_file_new_for_path (path_real);
+}
+
+#ifdef GSYSTEM_CONFIG_XATTRS
+static char *
+canonicalize_xattrs (char    *xattr_string,
+                     size_t   len)
+{
+  char *p;
+  GSList *xattrs = NULL;
+  GSList *iter;
+  GString *result;
+
+  result = g_string_new (0);
+
+  p = xattr_string;
+  while (p < xattr_string+len)
+    {
+      xattrs = g_slist_prepend (xattrs, p);
+      p += strlen (p) + 1;
+    }
+
+  xattrs = g_slist_sort (xattrs, (GCompareFunc) strcmp);
+  for (iter = xattrs; iter; iter = iter->next) {
+    g_string_append (result, iter->data);
+    g_string_append_c (result, '\0');
+  }
+
+  g_slist_free (xattrs);
+  return g_string_free (result, FALSE);
+}
+
+static GVariant *
+variant_new_ay_bytes (GBytes *bytes)
+{
+  gsize size;
+  gconstpointer data;
+  data = g_bytes_get_data (bytes, &size);
+  g_bytes_ref (bytes);
+  return g_variant_new_from_data (G_VARIANT_TYPE ("ay"), data, size,
+                                  TRUE, (GDestroyNotify)g_bytes_unref, bytes);
+}
+
+static gboolean
+read_xattr_name_array (const char *path,
+                       const char *xattrs,
+                       size_t      len,
+                       GVariantBuilder *builder,
+                       GError  **error)
+{
+  gboolean ret = FALSE;
+  const char *p;
+
+  p = xattrs;
+  while (p < xattrs+len)
+    {
+      ssize_t bytes_read;
+      char *buf;
+      GBytes *bytes = NULL;
+
+      bytes_read = lgetxattr (path, p, NULL, 0);
+      if (bytes_read < 0)
+        {
+          _set_error_from_errno (error);
+          g_prefix_error (error, "lgetxattr (%s, %s) failed: ", path, p);
+          goto out;
+        }
+      if (bytes_read == 0)
+        continue;
+
+      buf = g_malloc (bytes_read);
+      bytes = g_bytes_new_take (buf, bytes_read);
+      if (lgetxattr (path, p, buf, bytes_read) < 0)
+        {
+          g_bytes_unref (bytes);
+          _set_error_from_errno (error);
+          g_prefix_error (error, "lgetxattr (%s, %s) failed: ", path, p);
+          goto out;
+        }
+      
+      g_variant_builder_add (builder, "(@ay@ay)",
+                             g_variant_new_bytestring (p),
+                             variant_new_ay_bytes (bytes));
+
+      p = p + strlen (p) + 1;
+      g_bytes_unref (bytes);
+    }
+  
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+#endif
+
+/**
+ * gs_file_get_all_xattrs:
+ * @f: a #GFile
+ * @out_xattrs: (out): A new #GVariant containing the extended attributes
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Read all extended attributes of @f in a canonical sorted order, and
+ * set @out_xattrs with the result.
+ *
+ * If the filesystem does not support extended attributes, @out_xattrs
+ * will have 0 elements, and this function will return successfully.
+ */
+gboolean
+gs_file_get_all_xattrs (GFile         *f,
+                        GVariant     **out_xattrs,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+  gboolean ret = FALSE;
+  const char *path;
+  ssize_t bytes_read;
+  GVariant *ret_xattrs = NULL;
+  char *xattr_names = NULL;
+  char *xattr_names_canonical = NULL;
+  GVariantBuilder builder;
+  gboolean builder_initialized = FALSE;
+
+  path = gs_file_get_path_cached (f);
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(ayay)"));
+  builder_initialized = TRUE;
+
+#ifdef GSYSTEM_CONFIG_XATTRS
+  bytes_read = llistxattr (path, NULL, 0);
+
+  if (bytes_read < 0)
+    {
+      if (errno != ENOTSUP)
+        {
+          _set_error_from_errno (error);
+          g_prefix_error (error, "llistxattr (%s) failed: ", path);
+          goto out;
+        }
+    }
+  else if (bytes_read > 0)
+    {
+      xattr_names = g_malloc (bytes_read);
+      if (llistxattr (path, xattr_names, bytes_read) < 0)
+        {
+          _set_error_from_errno (error);
+          g_prefix_error (error, "llistxattr (%s) failed: ", path);
+          goto out;
+        }
+      xattr_names_canonical = canonicalize_xattrs (xattr_names, bytes_read);
+      
+      if (!read_xattr_name_array (path, xattr_names_canonical, bytes_read, &builder, error))
+        goto out;
+    }
+
+#endif
+
+  ret_xattrs = g_variant_builder_end (&builder);
+  g_variant_ref_sink (ret_xattrs);
+  
+  ret = TRUE;
+  gs_transfer_out_value (out_xattrs, &ret_xattrs);
+ out:
+  g_clear_pointer (&ret_xattrs, g_variant_unref);
+  g_clear_pointer (&xattr_names, g_free);
+  g_clear_pointer (&xattr_names_canonical, g_free);
+  if (!builder_initialized)
+    g_variant_builder_clear (&builder);
+  return ret;
+}
+
+/**
+ * gs_fd_set_all_xattrs:
+ * @fd: File descriptor
+ * @xattrs: Extended attributes
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * For each attribute in @xattrs, set its value on the file or
+ * directory referred to by @fd.  This function does not remove any
+ * attributes not in @xattrs.
+ */
+gboolean
+gs_fd_set_all_xattrs (int            fd,
+                      GVariant      *xattrs,
+                      GCancellable  *cancellable,
+                      GError       **error)
+{
+#ifdef GSYSTEM_CONFIG_XATTRS
+  gboolean ret = FALSE;
+  int i, n;
+
+  n = g_variant_n_children (xattrs);
+  for (i = 0; i < n; i++)
+    {
+      const guint8* name;
+      const guint8* value_data;
+      GVariant *value = NULL;
+      gsize value_len;
+      int res;
+
+      g_variant_get_child (xattrs, i, "(^&ay@ay)",
+                           &name, &value);
+      value_data = g_variant_get_fixed_array (value, &value_len, 1);
+      
+      do
+        res = fsetxattr (fd, (char*)name, (char*)value_data, value_len, 0);
+      while (G_UNLIKELY (res == -1 && errno == EINTR));
+      g_variant_unref (value);
+      if (G_UNLIKELY (res == -1))
+        {
+          _set_error_from_errno (error);
+          goto out;
+        }
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+#else
+  return TRUE;
+#endif
+}
+
+/**
+ * gs_file_set_all_xattrs:
+ * @file: File descriptor
+ * @xattrs: Extended attributes
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * For each attribute in @xattrs, set its value on the file or
+ * directory referred to by @file.  This function does not remove any
+ * attributes not in @xattrs.
+ */
+gboolean
+gs_file_set_all_xattrs (GFile         *file,
+                        GVariant      *xattrs,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+#ifdef GSYSTEM_CONFIG_XATTRS
+  gboolean ret = FALSE;
+  const char *path;
+  int i, n;
+
+  path = gs_file_get_path_cached (file);
+
+  n = g_variant_n_children (xattrs);
+  for (i = 0; i < n; i++)
+    {
+      const guint8* name;
+      GVariant *value;
+      const guint8* value_data;
+      gsize value_len;
+      gboolean loop_err;
+
+      g_variant_get_child (xattrs, i, "(^&ay@ay)",
+                           &name, &value);
+      value_data = g_variant_get_fixed_array (value, &value_len, 1);
+      
+      loop_err = lsetxattr (path, (char*)name, (char*)value_data, value_len, 0) < 0;
+      g_clear_pointer (&value, (GDestroyNotify) g_variant_unref);
+      if (loop_err)
+        {
+          _set_error_from_errno (error);
+          g_prefix_error (error, "lsetxattr (%s, %s) failed: ", path, name);
+          goto out;
+        }
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+#else
+  return TRUE;
+#endif
 }
