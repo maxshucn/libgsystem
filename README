@@ -5,3 +5,6 @@ depends on GCC/clang.
 
 It will also be a useful place to evolve new APIs (e.g. logging)
 before their eventual inclusion in GLib (if ever).
+
+There's no bugzilla component currently, please mail
+patches to: walters@verbum.org
