@@ -277,8 +277,8 @@ gs_file_map_readonly (GFile         *file,
  * @cancellable:
  * @error:
  *
- * Wraps the UNIX fdatasync() function, which ensures that the data in
- * @file is on non-volatile storage.
+ * Wraps the UNIX fsync() function (or fdatasync(), if available), which
+ * ensures that the data in @file is on non-volatile storage.
  */
 gboolean
 gs_file_sync_data (GFile          *file,
@@ -294,7 +294,13 @@ gs_file_sync_data (GFile          *file,
     goto out;
 
   do
-    res = fdatasync (fd);
+    {
+#ifdef __linux
+      res = fdatasync (fd);
+#else
+      res = fsync (fd);
+#endif
+    }
   while (G_UNLIKELY (res != 0 && errno == EINTR));
   if (res != 0)
     {
@@ -619,7 +625,7 @@ linkcopy_internal_attempt (GFile          *src,
       
   if (sync_data)
     {
-      /* Now, we need to fdatasync */
+      /* Now, we need to fsync */
       if (!gs_file_sync_data (tmp_dest, cancellable, error))
         goto out;
     }
