@@ -1438,43 +1438,23 @@ read_xattr_name_array (const char *path,
  out:
   return ret;
 }
-
 #endif
 
-/**
- * gs_file_get_all_xattrs:
- * @f: a #GFile
- * @out_xattrs: (out): A new #GVariant containing the extended attributes
- * @cancellable: Cancellable
- * @error: Error
- *
- * Read all extended attributes of @f in a canonical sorted order, and
- * set @out_xattrs with the result.
- *
- * If the filesystem does not support extended attributes, @out_xattrs
- * will have 0 elements, and this function will return successfully.
- */
-gboolean
-gs_file_get_all_xattrs (GFile         *f,
-                        GVariant     **out_xattrs,
-                        GCancellable  *cancellable,
-                        GError       **error)
+static gboolean
+get_xattrs_impl (GFile          *f,
+                 GVariantBuilder *builder,
+                 GCancellable   *cancellable,
+                 GError        **error)
 {
+#ifdef GSYSTEM_CONFIG_XATTRS
   gboolean ret = FALSE;
   const char *path;
   ssize_t bytes_read;
-  GVariant *ret_xattrs = NULL;
   char *xattr_names = NULL;
   char *xattr_names_canonical = NULL;
-  GVariantBuilder builder;
-  gboolean builder_initialized = FALSE;
 
   path = gs_file_get_path_cached (f);
 
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(ayay)"));
-  builder_initialized = TRUE;
-
-#ifdef GSYSTEM_CONFIG_XATTRS
   bytes_read = llistxattr (path, NULL, 0);
 
   if (bytes_read < 0)
@@ -1497,21 +1477,59 @@ gs_file_get_all_xattrs (GFile         *f,
         }
       xattr_names_canonical = canonicalize_xattrs (xattr_names, bytes_read);
       
-      if (!read_xattr_name_array (path, xattr_names_canonical, bytes_read, &builder, error))
+      if (!read_xattr_name_array (path, xattr_names_canonical, bytes_read, builder, error))
         goto out;
     }
 
+  ret = TRUE;
+ out:
+  g_clear_pointer (&xattr_names, g_free);
+  g_clear_pointer (&xattr_names_canonical, g_free);
+  return ret;
+#else
+  return TRUE;
 #endif
+}
+
+/**
+ * gs_file_get_all_xattrs:
+ * @f: a #GFile
+ * @out_xattrs: (out): A new #GVariant containing the extended attributes
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Read all extended attributes of @f in a canonical sorted order, and
+ * set @out_xattrs with the result.
+ *
+ * If the filesystem does not support extended attributes, @out_xattrs
+ * will have 0 elements, and this function will return successfully.
+ */
+gboolean
+gs_file_get_all_xattrs (GFile         *f,
+                        GVariant     **out_xattrs,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+  gboolean ret = FALSE;
+  GVariantBuilder builder;
+  gboolean builder_initialized = FALSE;
+  GVariant *ret_xattrs = NULL;
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(ayay)"));
+  builder_initialized = TRUE;
+
+  if (!get_xattrs_impl (f, &builder,
+                        cancellable, error))
+    goto out;
 
   ret_xattrs = g_variant_builder_end (&builder);
+  builder_initialized = FALSE;
   g_variant_ref_sink (ret_xattrs);
   
   ret = TRUE;
   gs_transfer_out_value (out_xattrs, &ret_xattrs);
  out:
   g_clear_pointer (&ret_xattrs, g_variant_unref);
-  g_clear_pointer (&xattr_names, g_free);
-  g_clear_pointer (&xattr_names_canonical, g_free);
   if (!builder_initialized)
     g_variant_builder_clear (&builder);
   return ret;
