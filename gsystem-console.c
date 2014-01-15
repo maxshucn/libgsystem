@@ -358,7 +358,7 @@ gs_console_begin_status_line (GSConsole     *console,
 
   if (!console->in_status_line)
     {
-      guint8 buf[2] = { 0x1B, 0x37 };
+      guint8 buf[3] = { (guint8)'\n', 0x1B, 0x37 };
       if (!g_output_stream_write_all (out, buf, sizeof (buf), &bytes_written,
                                       cancellable, error))
         goto out;
