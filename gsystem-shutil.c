@@ -27,6 +27,7 @@
 
 #define _GSYSTEM_NO_LOCAL_ALLOC
 #include "libgsystem.h"
+#include "gsystem-glib-compat.h"
 #include <glib-unix.h>
 #include <string.h>
 #include <sys/stat.h>
