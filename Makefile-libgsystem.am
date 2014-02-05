@@ -1,4 +1,4 @@
-# Copyright (C) 2012 Colin Walters <walters@verbum.org>
+# Copyright (C) 2012,2014 Colin Walters <walters@verbum.org>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,28 +15,48 @@
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 
-EXTRA_DIST += $(libgsystem_srcpath)/README $(libgsystem_srcpath)/COPYING
+lib_LTLIBRARIES += libgsystem.la
 
-libgsystem_la_SOURCES = \
-	$(libgsystem_srcpath)/gsystem-local-alloc.h \
-	$(libgsystem_srcpath)/gsystem-local-alloc.c \
-	$(libgsystem_srcpath)/gsystem-console.h \
-	$(libgsystem_srcpath)/gsystem-console.c \
-	$(libgsystem_srcpath)/gsystem-file-utils.h \
-	$(libgsystem_srcpath)/gsystem-file-utils.c \
-	$(libgsystem_srcpath)/gsystem-glib-compat.h \
-	$(libgsystem_srcpath)/gsystem-shutil.h \
-	$(libgsystem_srcpath)/gsystem-shutil.c \
-	$(libgsystem_srcpath)/gsystem-log.h \
-	$(libgsystem_srcpath)/gsystem-log.c \
-	$(libgsystem_srcpath)/gsystem-subprocess-context.h \
-	$(libgsystem_srcpath)/gsystem-subprocess-context-private.h \
-	$(libgsystem_srcpath)/gsystem-subprocess-context.c \
-	$(libgsystem_srcpath)/gsystem-subprocess.h \
-	$(libgsystem_srcpath)/gsystem-subprocess.c \
-	$(libgsystem_srcpath)/libgsystem.h \
+libgsystemheaderdir = $(includedir)/libgsystem
+libgsystemheader_HEADERS = \
+	src/gsystem-local-alloc.h \
+	src/gsystem-console.h \
+	src/gsystem-file-utils.h \
+	src/gsystem-glib-compat.h \
+	src/gsystem-shutil.h \
+	src/gsystem-log.h \
+	src/gsystem-subprocess-context.h \
+	src/gsystem-subprocess.h \
+	src/libgsystem.h \
 	$(NULL)
 
-libgsystem_la_CFLAGS = $(AM_CFLAGS) $(libgsystem_cflags)
-libgsystem_la_LDFLAGS = -avoid-version -Bsymbolic-functions -export-symbols-regex "^gs_" -no-undefined -export-dynamic
-libgsystem_la_LIBADD = $(libgsystem_libs)
+libgsystem_la_SOURCES = \
+	src/gsystem-local-alloc.c \
+	src/gsystem-console.c \
+	src/gsystem-file-utils.c \
+	src/gsystem-shutil.c \
+	src/gsystem-log.c \
+	src/gsystem-subprocess-context-private.h \
+	src/gsystem-subprocess-context.c \
+	src/gsystem-subprocess.c \
+	$(NULL)
+
+libgsystem_la_CFLAGS = $(AM_CFLAGS) $(BUILDDEP_GIO_UNIX_CFLAGS) $(BUILDDEP_SYSTEMD_JOURNAL_CFLAGS) -I$(srcdir)/src -DGSYSTEM_CONFIG_XATTRS
+libgsystem_la_LDFLAGS = -version-info 0:0:0 -Bsymbolic-functions -export-symbols-regex "^gs_" -no-undefined -export-dynamic
+libgsystem_la_LIBADD = $(BUILDDEP_GIO_UNIX_LIBS) $(BUILDDEP_SYSTEMD_JOURNAL_LIBS)
+
+pkgconfig_DATA += src/libgsystem.pc
+
+if BUILDOPT_INTROSPECTION
+GSystem-1.0.gir: libgsystem.la Makefile
+GSystem_1_0_gir_EXPORT_PACKAGES = libgsystem
+GSystem_1_0_gir_INCLUDES = Gio-2.0
+GSystem_1_0_gir_CFLAGS = $(libgsystem_la_CFLAGS)
+GSystem_1_0_gir_LIBS = libgsystem.la
+GSystem_1_0_gir_SCANNERFLAGS = --warn-all --identifier-prefix=GS --symbol-prefix=gs
+GSystem_1_0_gir_FILES = $(libgsystemheader_HEADERS) $(filter-out %-private.h,$(libgsystem_la_SOURCES))
+INTROSPECTION_GIRS += GSystem-1.0.gir
+gir_DATA += GSystem-1.0.gir
+typelib_DATA += GSystem-1.0.typelib
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
+endif

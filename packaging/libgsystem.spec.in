@@ -1,0 +1,62 @@
+Summary: GIO-based library with Unix/Linux specific API
+Name: libgsystem
+Version: 2014.1
+Release: 1%{?dist}
+#VCS: git:git://git.gnome.org/libgsystem
+Source0: http://ftp.gnome.org/pub/GNOME/sources/libgsystem/%{version}/libgsystem-%{version}.tar.xz
+License: LGPLv2+
+URL: https://wiki.gnome.org/Projects/LibGSystem
+
+# We always run autogen.sh
+BuildRequires: autoconf automake libtool
+# For docs
+BuildRequires: gtk-doc
+# Core requirements
+BuildRequires: pkgconfig(gio-unix-2.0)
+BuildRequires: libattr-devel
+BuildRequires: /usr/bin/g-ir-scanner
+
+%description
+LibGSystem is a GIO-based library usable as a "git submodule",
+targeted primarily for use by operating system components.
+
+%package devel
+Summary: Development headers for %{name}
+Group: Development/Libraries
+Requires: %{name} = %{version}-%{release}
+
+%description devel
+The %{name}-devel package includes the header files for the %{name} library.
+
+%prep
+%autosetup
+
+%build
+env NOCONFIGURE=1 ./autogen.sh
+%configure --disable-silent-rules \
+	   --enable-gtk-doc
+make %{?_smp_mflags}
+
+%install
+make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p -c"
+find $RPM_BUILD_ROOT -name '*.la' -delete
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%post
+/sbin/ldconfig
+
+%postun
+/sbin/ldconfig
+
+%files
+%doc COPYING README
+%{_libdir}/*.so.*
+%{_libdir}/girepository-1.0/*.typelib
+
+%files devel
+%{_libdir}/lib*.so
+%{_includedir}/*
+%{_libdir}/pkgconfig/*
+%{_datadir}/gir-1.0/*.gir

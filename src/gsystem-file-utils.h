@@ -167,6 +167,7 @@ gboolean gs_file_set_all_xattrs (GFile         *file,
                                  GCancellable  *cancellable,
                                  GError       **error);
 
+
 G_END_DECLS
 
 #endif
