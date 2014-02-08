@@ -48,9 +48,12 @@ AC_ARG_WITH(systemd-journal,
 	    AS_HELP_STRING([--without-systemd-journal], [Use systemd journal @<:@default=auto@:>@]),
 	    [], [with_systemd_journal=auto])
 AS_IF([test x$with_systemd_journal != xno], [
-  PKG_CHECK_MODULES([SYSTEMD_JOURNAL], [libsystemd-journal >= 200], have_systemd_journal=yes, have_systemd_journal=no)
+  PKG_CHECK_MODULES([BUILDDEP_SYSTEMD_JOURNAL], [libsystemd-journal >= 200], have_systemd_journal=yes, have_systemd_journal=no)
   ])
 AM_CONDITIONAL(ENABLE_SYSTEMD_JOURNAL, test x$have_systemd_journal = xyes)
+AS_IF([test x$have_systemd_journal = xyes], [
+  AC_DEFINE([ENABLE_SYSTEMD_JOURNAL],[1],[Define if you want to build with systemd journal support])
+])
 
 AC_CONFIG_FILES([
 Makefile
