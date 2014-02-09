@@ -1,7 +1,7 @@
 Summary: GIO-based library with Unix/Linux specific API
 Name: libgsystem
 Version: 2014.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 #VCS: git:git://git.gnome.org/libgsystem
 Source0: http://ftp.gnome.org/pub/GNOME/sources/libgsystem/%{version}/libgsystem-%{version}.tar.xz
 License: LGPLv2+
@@ -13,6 +13,7 @@ BuildRequires: autoconf automake libtool
 BuildRequires: gtk-doc
 # Core requirements
 BuildRequires: pkgconfig(gio-unix-2.0)
+BuildRequires: pkgconfig(libsystemd-journal)
 BuildRequires: libattr-devel
 BuildRequires: /usr/bin/g-ir-scanner
 
