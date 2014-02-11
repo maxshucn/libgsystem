@@ -136,8 +136,22 @@ cp_internal (GFile         *src,
         r = fchmod (dest_dfd, g_file_info_get_attribute_uint32 (src_info, "unix::mode"));
       while (G_UNLIKELY (r == -1 && errno == EINTR));
 
-      if (!copy_xattrs_from_file_to_fd (src, dest_dfd, cancellable, error))
-        goto out;
+      {
+        GError *temp_error = NULL;
+        if (!copy_xattrs_from_file_to_fd (src, dest_dfd, cancellable, &temp_error))
+          {
+            if (g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED) ||
+                g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED))
+              {
+                g_clear_error (&temp_error);
+              }
+            else
+              {
+                g_propagate_error (error, temp_error);
+                goto out;
+              }
+          }
+      }
 
       if (dest_dfd != -1)
         {
