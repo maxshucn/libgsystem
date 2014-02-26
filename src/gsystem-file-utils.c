@@ -1588,29 +1588,15 @@ gs_fd_set_all_xattrs (int            fd,
 #endif
 }
 
-/**
- * gs_file_set_all_xattrs:
- * @file: File descriptor
- * @xattrs: Extended attributes
- * @cancellable: Cancellable
- * @error: Error
- *
- * For each attribute in @xattrs, set its value on the file or
- * directory referred to by @file.  This function does not remove any
- * attributes not in @xattrs.
- */
-gboolean
-gs_file_set_all_xattrs (GFile         *file,
-                        GVariant      *xattrs,
-                        GCancellable  *cancellable,
-                        GError       **error)
+static gboolean
+set_all_xattrs_for_path (const char    *path,
+                         GVariant      *xattrs,
+                         GCancellable  *cancellable,
+                         GError       **error)
 {
 #ifdef GSYSTEM_CONFIG_XATTRS
   gboolean ret = FALSE;
-  const char *path;
   int i, n;
-
-  path = gs_file_get_path_cached (file);
 
   n = g_variant_n_children (xattrs);
   for (i = 0; i < n; i++)
@@ -1641,4 +1627,42 @@ gs_file_set_all_xattrs (GFile         *file,
 #else
   return TRUE;
 #endif
+}
+
+gboolean
+gs_dfd_and_name_set_all_xattrs (int            dfd,
+                                const char    *name,
+                                GVariant      *xattrs,
+                                GCancellable  *cancellable,
+                                GError       **error)
+{
+  /* A workaround for the lack of lsetxattrat(), thanks to Florian Weimer:
+   * https://mail.gnome.org/archives/ostree-list/2014-February/msg00017.html
+   */
+  char *path = g_strdup_printf ("/proc/self/fd/%d/%s", dfd, name);
+  gboolean ret;
+
+  ret = set_all_xattrs_for_path (path, xattrs, cancellable, error);
+  g_free (path);
+  return ret;
+}
+
+/**
+ * gs_file_set_all_xattrs:
+ * @file: File descriptor
+ * @xattrs: Extended attributes
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * For each attribute in @xattrs, set its value on the file or
+ * directory referred to by @file.  This function does not remove any
+ * attributes not in @xattrs.
+ */
+gboolean
+gs_file_set_all_xattrs (GFile         *file,
+                        GVariant      *xattrs,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+  return set_all_xattrs_for_path (gs_file_get_path_cached (file), xattrs, cancellable, error);
 }

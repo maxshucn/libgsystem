@@ -162,6 +162,12 @@ gboolean gs_fd_set_all_xattrs (int            fd,
                                GCancellable  *cancellable,
                                GError       **error);
 
+gboolean gs_dfd_and_name_set_all_xattrs (int            dfd,
+                                         const char    *name,
+                                         GVariant      *xattrs,
+                                         GCancellable  *cancellable,
+                                         GError       **error);
+
 gboolean gs_file_set_all_xattrs (GFile         *file,
                                  GVariant      *xattrs,
                                  GCancellable  *cancellable,
