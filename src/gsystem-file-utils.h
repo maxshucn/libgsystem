@@ -75,6 +75,12 @@ gboolean gs_file_open_dir_fd (GFile         *path,
                               GCancellable  *cancellable,
                               GError       **error);
 
+gboolean gs_file_open_dir_fd_at (int            parent_dfd,
+                                 const char    *name,
+                                 int           *out_fd,
+                                 GCancellable  *cancellable,
+                                 GError       **error);
+
 gboolean gs_file_open_in_tmpdir_at (int                tmpdir_fd,
                                     int                mode,
                                     char             **out_name,
