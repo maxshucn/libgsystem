@@ -464,6 +464,34 @@ gs_file_open_dir_fd (GFile         *path,
 }
 
 /**
+ * gs_file_open_dir_fd_at:
+ * @parent_dfd: Parent directory file descriptor
+ * @name: Directory name
+ * @out_fd: (out): File descriptor for directory
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * On success, sets @out_fd to a file descriptor for the directory
+ * that can be used with UNIX functions such as openat().
+ */
+gboolean
+gs_file_open_dir_fd_at (int            parent_dfd,
+                        const char    *name,
+                        int           *out_fd,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+  /* Linux specific probably */
+  *out_fd = openat (parent_dfd, name, O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC);
+  if (*out_fd == -1)
+    {
+      _set_error_from_errno (error);
+      return FALSE;
+    }
+  return TRUE;
+}
+
+/**
  * gs_file_open_in_tmpdir_at:
  * @tmpdir_fd: Directory to place temporary file
  * @mode: Default mode (will be affected by umask)
