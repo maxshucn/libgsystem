@@ -1604,6 +1604,7 @@ gs_fd_set_all_xattrs (int            fd,
       if (G_UNLIKELY (res == -1))
         {
           _set_error_from_errno (error);
+          g_prefix_error (error, "fsetxattr: ");
           goto out;
         }
     }
@@ -1644,7 +1645,7 @@ set_all_xattrs_for_path (const char    *path,
       if (loop_err)
         {
           _set_error_from_errno (error);
-          g_prefix_error (error, "lsetxattr (%s, %s) failed: ", path, name);
+          g_prefix_error (error, "lsetxattr: ");
           goto out;
         }
     }
