@@ -27,6 +27,10 @@ G_BEGIN_DECLS
 
 gboolean gs_stdout_is_journal (void);
 
+void gs_log_with_id (const char *message_id,
+                     const char *format,
+                     ...) G_GNUC_PRINTF (2, 3);
+
 void gs_log_structured (const char *message,
                         const char *const *keys);
 
