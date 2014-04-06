@@ -16,6 +16,9 @@
 # Boston, MA 02111-1307, USA.
 
 include Makefile-decls.am
+include Makefile.glib
+GLIB_GENERATED =
+BUILT_SOURCES += $(GLIB_GENERATED)
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_CPPFLAGS += -DDATADIR='"$(datadir)"' -DLIBEXECDIR='"$(libexecdir)"' \

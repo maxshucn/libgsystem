@@ -34,6 +34,7 @@ G_BEGIN_DECLS
   } G_STMT_END;
 
 #include <gsystem-console.h>
+#include <gsystem-enum-types.h>
 #include <gsystem-file-utils.h>
 #include <gsystem-shutil.h>
 #if GLIB_CHECK_VERSION(2,34,0)

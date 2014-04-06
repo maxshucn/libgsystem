@@ -22,6 +22,7 @@ libgsystemheader_HEADERS = \
 	src/gsystem-local-alloc.h \
 	src/gsystem-console.h \
 	src/gsystem-file-utils.h \
+	src/gsystem-file-tree-walk.h \
 	src/gsystem-glib-compat.h \
 	src/gsystem-shutil.h \
 	src/gsystem-log.h \
@@ -34,6 +35,7 @@ libgsystem_la_SOURCES = \
 	src/gsystem-local-alloc.c \
 	src/gsystem-console.c \
 	src/gsystem-file-utils.c \
+	src/gsystem-file-tree-walk.c \
 	src/gsystem-shutil.c \
 	src/gsystem-log.c \
 	src/gsystem-subprocess-context-private.h \
@@ -60,3 +62,8 @@ gir_DATA += GSystem-1.0.gir
 typelib_DATA += GSystem-1.0.typelib
 CLEANFILES += $(gir_DATA) $(typelib_DATA)
 endif
+
+GLIB_GENERATED += gsystem-enum-types.h gsystem-enum-types.c
+gsystem_enum_types_sources = $(libgsystemheader_HEADERS) $(libgsystem_la_SOURCES)
+gsystem_enum_types_MKENUMS_H_FLAGS = --identifier-prefix GS --symbol-prefix gs
+gsystem_enum_types_MKENUMS_C_FLAGS = --identifier-prefix GS --symbol-prefix gs
