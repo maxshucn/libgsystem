@@ -1467,19 +1467,22 @@ read_xattr_name_array (const char *path,
 #endif
 
 static gboolean
-get_xattrs_impl (GFile          *f,
-                 GVariantBuilder *builder,
+get_xattrs_impl (const char      *path,
+                 GVariant       **out_xattrs,
                  GCancellable   *cancellable,
                  GError        **error)
 {
 #ifdef GSYSTEM_CONFIG_XATTRS
   gboolean ret = FALSE;
-  const char *path;
   ssize_t bytes_read;
   char *xattr_names = NULL;
   char *xattr_names_canonical = NULL;
+  GVariantBuilder builder;
+  gboolean builder_initialized = FALSE;
+  GVariant *ret_xattrs = NULL;
 
-  path = gs_file_get_path_cached (f);
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(ayay)"));
+  builder_initialized = TRUE;
 
   bytes_read = llistxattr (path, NULL, 0);
 
@@ -1501,18 +1504,59 @@ get_xattrs_impl (GFile          *f,
         }
       xattr_names_canonical = canonicalize_xattrs (xattr_names, bytes_read);
       
-      if (!read_xattr_name_array (path, xattr_names_canonical, bytes_read, builder, error))
+      if (!read_xattr_name_array (path, xattr_names_canonical, bytes_read, &builder, error))
         goto out;
     }
 
+  ret_xattrs = g_variant_builder_end (&builder);
+  builder_initialized = FALSE;
+  g_variant_ref_sink (ret_xattrs);
+  
   ret = TRUE;
+  gs_transfer_out_value (out_xattrs, &ret_xattrs);
  out:
   g_clear_pointer (&xattr_names, g_free);
   g_clear_pointer (&xattr_names_canonical, g_free);
+  g_clear_pointer (&ret_xattrs, g_variant_unref);
+  if (!builder_initialized)
+    g_variant_builder_clear (&builder);
   return ret;
 #else
   return TRUE;
 #endif
+}
+
+/**
+ * gs_dfd_and_name_get_all_xattrs:
+ * @dfd: Parent directory file descriptor
+ * @name: File name
+ * @out_xattrs: (out): Extended attribute set
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Load all extended attributes for the file named @name residing in
+ * directory @dfd.
+ */
+gboolean
+gs_dfd_and_name_get_all_xattrs (int            dfd,
+                                const char    *name,
+                                GVariant     **out_xattrs,
+                                GCancellable  *cancellable,
+                                GError       **error)
+{
+  gboolean ret = FALSE;
+  /* A workaround for the lack of lgetxattrat(), thanks to Florian Weimer:
+   * https://mail.gnome.org/archives/ostree-list/2014-February/msg00017.html
+   */
+  char *path = g_strdup_printf ("/proc/self/fd/%d/%s", dfd, name);
+  if (!get_xattrs_impl (path, out_xattrs,
+                        cancellable, error))
+    goto out;
+
+  ret = TRUE;
+ out:
+  g_free (path);
+  return ret;
 }
 
 /**
@@ -1534,29 +1578,8 @@ gs_file_get_all_xattrs (GFile         *f,
                         GCancellable  *cancellable,
                         GError       **error)
 {
-  gboolean ret = FALSE;
-  GVariantBuilder builder;
-  gboolean builder_initialized = FALSE;
-  GVariant *ret_xattrs = NULL;
-
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(ayay)"));
-  builder_initialized = TRUE;
-
-  if (!get_xattrs_impl (f, &builder,
-                        cancellable, error))
-    goto out;
-
-  ret_xattrs = g_variant_builder_end (&builder);
-  builder_initialized = FALSE;
-  g_variant_ref_sink (ret_xattrs);
-  
-  ret = TRUE;
-  gs_transfer_out_value (out_xattrs, &ret_xattrs);
- out:
-  g_clear_pointer (&ret_xattrs, g_variant_unref);
-  if (!builder_initialized)
-    g_variant_builder_clear (&builder);
-  return ret;
+  return get_xattrs_impl (gs_file_get_path_cached (f), out_xattrs,
+                          cancellable, error);
 }
 
 /**

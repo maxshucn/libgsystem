@@ -163,6 +163,12 @@ gboolean gs_file_get_all_xattrs (GFile         *f,
                                  GCancellable  *cancellable,
                                  GError       **error);
 
+gboolean gs_dfd_and_name_get_all_xattrs (int            dfd,
+                                         const char    *name,
+                                         GVariant     **out_xattrs,
+                                         GCancellable  *cancellable,
+                                         GError       **error);
+
 gboolean gs_fd_set_all_xattrs (int            fd,
                                GVariant      *xattrs,
                                GCancellable  *cancellable,
