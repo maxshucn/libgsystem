@@ -1363,18 +1363,23 @@ GFile *
 gs_file_realpath (GFile *file)
 {
   gchar *path;
-  gchar path_real[PATH_MAX];
+  char *path_real;
+  GFile *file_real;
 
   path = g_file_get_path (file);
 
-  if (realpath ((const char *) path, path_real) == NULL)
+  path_real = realpath((const char *) path, NULL);
+  if (path_real == NULL)
     {
       g_free (path);
       return NULL;
     }
 
   g_free (path);
-  return g_file_new_for_path (path_real);
+  file_real = g_file_new_for_path (path_real);
+  free (path_real);
+
+  return file_real;
 }
 
 #ifdef GSYSTEM_CONFIG_XATTRS
