@@ -130,6 +130,13 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define gs_unref_hashtable __attribute__ ((cleanup(gs_local_hashtable_unref)))
 
 /**
+ * gs_free_list:
+ *
+ * Call g_list_free() on a variable location when it goes out
+ * of scope.
+ */
+#define gs_free_list __attribute__ ((cleanup(gs_local_free_list)))
+
  * gs_free_checksum:
  *
  * Call g_checksum_free() on a variable location when it goes out
