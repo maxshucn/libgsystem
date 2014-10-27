@@ -599,6 +599,7 @@ gs_subprocess_on_child_exited (GPid       pid,
 
   g_simple_async_result_complete (data->result);
 
+  g_clear_object (&data->cancellable);
   g_object_unref (data->result);
   g_object_unref (data->self);
   g_free (data);
