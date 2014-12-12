@@ -292,29 +292,25 @@ struct_stat_to_dt (struct stat *stbuf)
 }
 
 static gboolean
-gs_shutil_rm_rf_children (DIR                *dir,
+gs_shutil_rm_rf_children (GSDirFdIterator    *dfd_iter,
                           GCancellable       *cancellable,
                           GError            **error)
 {
   gboolean ret = FALSE;
-  int dfd;
-  DIR *child_dir = NULL;
   struct dirent *dent;
-  union dirent_storage buf;
 
-  if (g_cancellable_set_error_if_cancelled (cancellable, error))
-    goto out;
-
-  dfd = dirfd (dir);
-
-  while (readdir_r (dir, &buf.dent, &dent) == 0)
+  while (TRUE)
     {
+      if (!gs_dirfd_iterator_next_dent (dfd_iter, &dent, cancellable, error))
+        goto out;
+
       if (dent == NULL)
         break;
+
       if (dent->d_type == DT_UNKNOWN)
         {
           struct stat stbuf;
-          if (fstatat (dfd, dent->d_name, &stbuf, AT_SYMLINK_NOFOLLOW) == -1)
+          if (fstatat (dfd_iter->fd, dent->d_name, &stbuf, AT_SYMLINK_NOFOLLOW) == -1)
             {
               int errsv = errno;
               if (errsv == ENOENT)
@@ -332,52 +328,28 @@ gs_shutil_rm_rf_children (DIR                *dir,
             dent->d_type = DT_REG;
         }
 
-      if (strcmp (dent->d_name, ".") == 0 || strcmp (dent->d_name, "..") == 0)
-        continue;
-          
       if (dent->d_type == DT_DIR)
         {
-          int child_dfd = openat (dfd, dent->d_name, O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+          gs_dirfd_iterator_cleanup GSDirFdIterator child_dfd_iter = { 0, };
 
-          if (child_dfd == -1)
-            {
-              if (errno == ENOENT)
-                continue;
-              else
-                {
-                  int errsv = errno;
-                  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                       g_strerror (errsv));
-                  goto out;
-                }
-            }
-
-          child_dir = fdopendir (child_dfd);
-          if (!child_dir)
-            {
-              int errsv = errno;
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                   g_strerror (errsv));
-              goto out;
-            }
-
-          if (!gs_shutil_rm_rf_children (child_dir, cancellable, error))
+          if (!gs_dirfd_iterator_init_at (dfd_iter->fd, dent->d_name, FALSE,
+                                          &child_dfd_iter, error))
             goto out;
 
-          if (unlinkat (dfd, dent->d_name, AT_REMOVEDIR) == -1)
+          if (!gs_shutil_rm_rf_children (&child_dfd_iter, cancellable, error))
+            goto out;
+
+          if (unlinkat (dfd_iter->fd, dent->d_name, AT_REMOVEDIR) == -1)
             {
               int errsv = errno;
               g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
                                    g_strerror (errsv));
               goto out;
             }
-
-          (void) closedir (child_dir);
-          child_dir = NULL;
         }
       else
         {
-          if (unlinkat (dfd, dent->d_name, 0) == -1)
+          if (unlinkat (dfd_iter->fd, dent->d_name, 0) == -1)
             {
               int errsv = errno;
               if (errno != ENOENT)
@@ -389,13 +361,84 @@ gs_shutil_rm_rf_children (DIR                *dir,
             }
         }
     }
-  /* Ignore error result from readdir_r, that's what others
-   * seem to do =(
-   */
 
   ret = TRUE;
  out:
-  if (child_dir) (void) closedir (child_dir);
+  return ret;
+}
+
+/**
+ * gs_shutil_rm_rf_at:
+ * @dfd: A directory file descriptor, or -1 for current
+ * @path: Path
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Recursively delete the filename referenced by the combination of
+ * the directory fd@dfd and @path; it may be a file or directory.  No
+ * error is thrown if @path does not exist.
+ */
+gboolean
+gs_shutil_rm_rf_at (int           dfd,
+                    const char   *path,
+                    GCancellable *cancellable,
+                    GError      **error)
+{
+  gboolean ret = FALSE;
+  int target_dfd = -1;
+  gs_dirfd_iterator_cleanup GSDirFdIterator dfd_iter = { 0, };
+
+  /* With O_NOFOLLOW first */
+  target_dfd = openat (dfd, path,
+                       O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+
+  if (target_dfd == -1)
+    {
+      int errsv = errno;
+      if (errsv == ENOENT)
+        {
+          ;
+        }
+      else if (errsv == ENOTDIR || errsv == ELOOP)
+        {
+          if (unlinkat (dfd, path, 0) != 0)
+            {
+              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                                   g_strerror (errsv));
+              goto out;
+            }
+        }
+      else
+        {
+          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                               g_strerror (errsv));
+          goto out;
+        }
+    }
+  else
+    {
+      if (!gs_dirfd_iterator_init_take_fd (target_dfd, &dfd_iter, error))
+        goto out;
+      target_dfd = -1;
+
+      if (!gs_shutil_rm_rf_children (&dfd_iter, cancellable, error))
+        goto out;
+
+      if (unlinkat (dfd, path, AT_REMOVEDIR) == -1)
+        {
+          int errsv = errno;
+          if (errsv != ENOENT)
+            {
+              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
+                                   g_strerror (errsv));
+              goto out;
+            }
+        }
+    }
+
+  ret = TRUE;
+ out:
+  if (target_dfd != -1) (void) close (target_dfd);
   return ret;
 }
 
@@ -413,62 +456,6 @@ gs_shutil_rm_rf (GFile        *path,
                  GCancellable *cancellable,
                  GError      **error)
 {
-  gboolean ret = FALSE;
-  int dfd = -1;
-  DIR *d = NULL;
-
-  /* With O_NOFOLLOW first */
-  dfd = openat (AT_FDCWD, gs_file_get_path_cached (path),
-                O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-
-  if (dfd == -1)
-    {
-      int errsv = errno;
-      if (errsv == ENOENT)
-        {
-          ;
-        }
-      else if (errsv == ENOTDIR || errsv == ELOOP)
-        {
-          if (!gs_file_unlink (path, cancellable, error))
-            goto out;
-        }
-      else
-        {
-          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               g_strerror (errsv));
-          goto out;
-        }
-    }
-  else
-    {
-      d = fdopendir (dfd);
-      if (!d)
-        {
-          int errsv = errno;
-          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               g_strerror (errsv));
-          goto out;
-        }
-
-      if (!gs_shutil_rm_rf_children (d, cancellable, error))
-        goto out;
-
-      if (rmdir (gs_file_get_path_cached (path)) == -1)
-        {
-          int errsv = errno;
-          if (errsv != ENOENT)
-            {
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                   g_strerror (errsv));
-              goto out;
-            }
-        }
-    }
-
-  ret = TRUE;
- out:
-  if (d) (void) closedir (d);
-  return ret;
+  return gs_shutil_rm_rf_at (-1, gs_file_get_path_cached (path), cancellable, error);
 }
 
