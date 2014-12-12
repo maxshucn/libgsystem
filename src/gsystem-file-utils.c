@@ -1761,3 +1761,97 @@ gs_file_set_all_xattrs (GFile         *file,
 {
   return set_all_xattrs_for_path (gs_file_get_path_cached (file), xattrs, cancellable, error);
 }
+
+struct GsRealDirfdIterator
+{
+  gboolean initialized;
+  int fd;
+  DIR *d;
+};
+typedef struct GsRealDirfdIterator GsRealDirfdIterator;
+
+gboolean
+gs_dirfd_iterator_init_at (int              dfd,
+                           const char      *path,
+                           gboolean         follow,
+                           GSDirFdIterator *dfd_iter,
+                           GError         **error)
+{
+  gboolean ret = FALSE;
+  int fd = -1;
+  
+  if (!gs_opendirat (dfd, path, follow, &fd, error))
+    goto out;
+
+  if (!gs_dirfd_iterator_init_take_fd (fd, dfd_iter, error))
+    goto out;
+  /* Transfer value */
+  fd = -1;
+
+  ret = TRUE;
+ out:
+  if (fd != -1) (void) close (fd);
+  return ret;
+}
+
+gboolean
+gs_dirfd_iterator_init_take_fd (int dfd,
+                                GSDirFdIterator *dfd_iter,
+                                GError **error)
+{
+  gboolean ret = FALSE;
+  GsRealDirfdIterator *real_dfd_iter = (GsRealDirfdIterator*) dfd_iter;
+  DIR *d = NULL;
+
+  d = fdopendir (dfd);
+  if (!d)
+    {
+      _set_error_from_errno ("fdopendir", error);
+      goto out;
+    }
+
+  real_dfd_iter->fd = dfd;
+  real_dfd_iter->d = d;
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+gboolean
+gs_dirfd_iterator_next_dent (GSDirFdIterator  *dfd_iter,
+                             struct dirent   **out_dent,
+                             GCancellable     *cancellable,
+                             GError          **error)
+{
+  gboolean ret = FALSE;
+  GsRealDirfdIterator *real_dfd_iter = (GsRealDirfdIterator*) dfd_iter;
+
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    goto out;
+
+  do
+    {
+      errno = 0;
+      *out_dent = readdir (real_dfd_iter->d);
+      if (*out_dent == NULL && errno != 0)
+        {
+          _set_error_from_errno ("fdopendir", error);
+          goto out;
+        }
+    } while (*out_dent &&
+             (strcmp ((*out_dent)->d_name, ".") == 0 ||
+              strcmp ((*out_dent)->d_name, "..") == 0));
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+void
+gs_dirfd_iterator_clear (GSDirFdIterator *dfd_iter)
+{
+  GsRealDirfdIterator *real_dfd_iter = (GsRealDirfdIterator*) dfd_iter;
+  /* fd is owned by dfd_iter */
+  (void) closedir (real_dfd_iter->d);
+}

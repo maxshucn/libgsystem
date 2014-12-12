@@ -30,6 +30,28 @@ const char *gs_file_get_path_cached (GFile *file);
 
 const char *gs_file_get_basename_cached (GFile *file);
 
+struct GSDirFdIterator {
+  gboolean initialized;
+  int fd;
+  gpointer padding_data[4];
+};
+
+typedef struct GSDirFdIterator GSDirFdIterator;
+gboolean gs_dirfd_iterator_init_at (int dfd, const char *path,
+                                    gboolean follow,
+                                    GSDirFdIterator *dfd_iter, GError **error);
+gboolean gs_dirfd_iterator_init_take_fd (int dfd, GSDirFdIterator *dfd_iter, GError **error);
+#ifndef __GI_SCANNER__
+gboolean gs_dirfd_iterator_next_dent (GSDirFdIterator  *dfd_iter,
+                                      struct dirent   **out_dent,
+                                      GCancellable     *cancellable,
+                                      GError          **error);
+#endif
+void gs_dirfd_iterator_clear (GSDirFdIterator *dfd_iter);
+
+#define gs_dirfd_iterator_cleanup __attribute__((cleanup(gs_dirfd_iterator_clear)))
+
+
 gboolean gs_file_enumerator_iterate (GFileEnumerator  *direnum,
                                      GFileInfo       **out_info,
                                      GFile           **out_child,
