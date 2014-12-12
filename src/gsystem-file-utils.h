@@ -81,6 +81,16 @@ gboolean gs_file_open_dir_fd_at (int            parent_dfd,
                                  GCancellable  *cancellable,
                                  GError       **error);
 
+int gs_opendirat_with_errno (int           dfd,
+                             const char   *path,
+                             gboolean      follow);
+gboolean gs_opendirat (int             dfd,
+                       const char     *path,
+                       gboolean        follow,
+                       int            *out_fd,
+                       GError        **error);
+
+
 gboolean gs_file_open_in_tmpdir_at (int                tmpdir_fd,
                                     int                mode,
                                     char             **out_name,

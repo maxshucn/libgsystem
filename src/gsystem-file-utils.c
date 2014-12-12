@@ -492,6 +492,50 @@ gs_file_open_dir_fd_at (int            parent_dfd,
 }
 
 /**
+ * gs_opendirat_with_errno:
+ * @dfd: File descriptor for origin directory
+ * @name: Pathname, relative to @dfd
+ * @follow: Whether or not to follow symbolic links
+ *
+ * Use openat() to open a directory, using a standard set of flags.
+ * This function sets errno.
+ */
+int
+gs_opendirat_with_errno (int dfd, const char *path, gboolean follow)
+{
+  int flags = O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC | O_NOCTTY;
+  if (!follow)
+    flags |= O_NOFOLLOW;
+  return openat (dfd, path, flags);
+}
+
+/**
+ * gs_opendirat:
+ * @dfd: File descriptor for origin directory
+ * @path: Pathname, relative to @dfd
+ * @follow: Whether or not to follow symbolic links
+ * @error: Error
+ *
+ * Use openat() to open a directory, using a standard set of flags.
+ */
+gboolean
+gs_opendirat (int             dfd,
+              const char     *path,
+              gboolean        follow,
+              int            *out_fd,
+              GError        **error)
+{
+  int ret = gs_opendirat_with_errno (dfd, path, follow);
+  if (ret == -1)
+    {
+      _set_error_from_errno ("openat", error);
+      return FALSE;
+    }
+  *out_fd = ret;
+  return TRUE;
+}
+
+/**
  * gs_file_open_in_tmpdir_at:
  * @tmpdir_fd: Directory to place temporary file
  * @mode: Default mode (will be affected by umask)
