@@ -1,7 +1,7 @@
 AC_PREREQ([2.63])
 AC_INIT([libgsystem], [2014.2], [walters@verbum.org])
 AC_CONFIG_HEADER([config.h])
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIR([buildutil])
 AC_CONFIG_AUX_DIR([build-aux])
 
 AM_INIT_AUTOMAKE([1.11 -Wno-portability foreign no-define tar-ustar no-dist-gzip dist-xz])
@@ -36,6 +36,8 @@ PKG_PROG_PKG_CONFIG
 GIO_DEPENDENCY="gio-unix-2.0 >= 2.34.0"
 PKG_CHECK_MODULES(BUILDDEP_GIO_UNIX, $GIO_DEPENDENCY)
 
+GLIB_TESTS
+
 GTK_DOC_CHECK([1.15], [--flavour no-tmpl])
 AC_PATH_PROG([XSLTPROC], [xsltproc])
 
@@ -43,6 +45,7 @@ m4_ifdef([GOBJECT_INTROSPECTION_CHECK], [
   GOBJECT_INTROSPECTION_CHECK([1.34.0])
 ])
 AM_CONDITIONAL(BUILDOPT_INTROSPECTION, test "x$found_introspection" = xyes)
+
 
 AC_ARG_WITH(systemd-journal,
 	    AS_HELP_STRING([--without-systemd-journal], [Use systemd journal @<:@default=auto@:>@]),

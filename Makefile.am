@@ -17,7 +17,7 @@
 
 include Makefile-decls.am
 
-ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
+ACLOCAL_AMFLAGS = -I buildutil ${ACLOCAL_FLAGS}
 AM_CPPFLAGS += -DDATADIR='"$(datadir)"' -DLIBEXECDIR='"$(libexecdir)"' \
 	-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_34 -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_34
 AM_CFLAGS += $(WARN_CFLAGS)
@@ -32,3 +32,4 @@ include $(INTROSPECTION_MAKEFILE)
 endif
 
 include Makefile-libgsystem.am
+include Makefile-tests.am
