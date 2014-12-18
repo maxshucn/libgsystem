@@ -167,16 +167,6 @@ gs_console_get_stderr (void)
 #endif
 }
 
-#ifdef G_OS_UNIX
-static inline void
-_set_error_from_errno (GError **error)
-{
-  int errsv = errno;
-  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                       g_strerror (errsv));
-}
-#endif
-
 /**
  * gs_console_read_password:
  * @console: the #GSConsole
@@ -250,7 +240,7 @@ gs_console_read_password (GSConsole     *console,
   while (G_UNLIKELY (res == -1 && errno == EINTR));
   if (res == -1)
     {
-      _set_error_from_errno (error);
+      gs_set_error_from_errno (error, errno);
       goto out;
     }
   ots = ts;
@@ -260,7 +250,7 @@ gs_console_read_password (GSConsole     *console,
   while (G_UNLIKELY (res == -1 && errno == EINTR));
   if (res == -1)
     {
-      _set_error_from_errno (error);
+      gs_set_error_from_errno (error, errno);
       goto out;
     }
 
@@ -307,7 +297,7 @@ gs_console_read_password (GSConsole     *console,
       while (G_UNLIKELY (res == -1 && errno == EINTR));
       if (res == -1)
         {
-          _set_error_from_errno (error);
+          gs_set_error_from_errno (error, errno);
           g_string_free (str, TRUE);
           return NULL;
         }

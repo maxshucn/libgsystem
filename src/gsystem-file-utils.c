@@ -71,14 +71,6 @@ open_nointr (const char *path, int flags, mode_t mode)
   return res;
 }
 
-static inline void
-_set_error_from_errno (const char *prefix, GError **error)
-{
-  int errsv = errno;
-  g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-               "%s: %s", prefix, g_strerror (errsv));
-}
-
 /**
  * gs_file_openat_noatime:
  * @dfd: File descriptor for directory
@@ -113,7 +105,7 @@ gs_file_openat_noatime (int            dfd,
   
   if (fd == -1)
     {
-      _set_error_from_errno ("openat", error);
+      gs_set_prefix_error_from_errno (error, errno, "openat");
       return FALSE;
     }
   else
@@ -192,7 +184,7 @@ gs_stream_fstat (GFileDescriptorBased *stream,
 
   if (fstat (fd, stbuf) == -1)
     {
-      _set_error_from_errno ("fstat", error);
+      gs_set_prefix_error_from_errno (error, errno, "fstat");
       goto out;
     }
 
@@ -304,14 +296,14 @@ gs_file_sync_data (GFile          *file,
   while (G_UNLIKELY (res != 0 && errno == EINTR));
   if (res != 0)
     {
-      _set_error_from_errno ("fdatasync", error);
+      gs_set_prefix_error_from_errno (error, errno, "fdatasync");
       goto out;
     }
 
   res = close_nointr (fd);
   if (res != 0)
     {
-      _set_error_from_errno ("close", error);
+      gs_set_prefix_error_from_errno (error, errno, "close");
       goto out;
     }
   fd = -1;
@@ -348,14 +340,14 @@ gs_file_create (GFile          *file,
   fd = open_nointr (gs_file_get_path_cached (file), O_WRONLY | O_CREAT | O_EXCL, mode);
   if (fd < 0)
     {
-      _set_error_from_errno ("open", error);
+      gs_set_prefix_error_from_errno (error, errno, "open");
       goto out;
     }
 
   if (fchmod (fd, mode) < 0)
     {
       close (fd);
-      _set_error_from_errno ("fchmod", error);
+      gs_set_prefix_error_from_errno (error, errno, "fchmod");
       goto out;
     }
   
@@ -457,7 +449,7 @@ gs_file_open_dir_fd (GFile         *path,
   *out_fd = open (gs_file_get_path_cached (path), O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC);
   if (*out_fd == -1)
     {
-      _set_error_from_errno ("open", error);
+      gs_set_prefix_error_from_errno (error, errno, "open");
       return FALSE;
     }
   return TRUE;
@@ -485,7 +477,7 @@ gs_file_open_dir_fd_at (int            parent_dfd,
   *out_fd = openat (parent_dfd, name, O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC);
   if (*out_fd == -1)
     {
-      _set_error_from_errno ("openat", error);
+      gs_set_prefix_error_from_errno (error, errno, "openat");
       return FALSE;
     }
   return TRUE;
@@ -528,7 +520,7 @@ gs_opendirat (int             dfd,
   int ret = gs_opendirat_with_errno (dfd, path, follow);
   if (ret == -1)
     {
-      _set_error_from_errno ("openat", error);
+      gs_set_prefix_error_from_errno (error, errno, "openat");
       return FALSE;
     }
   *out_fd = ret;
@@ -574,7 +566,7 @@ gs_file_open_in_tmpdir_at (int                tmpdir_fd,
       while (fd == -1 && errno == EINTR);
       if (fd < 0 && errno != EEXIST)
         {
-          _set_error_from_errno ("openat", error);
+          gs_set_prefix_error_from_errno (error, errno, "openat");
           goto out;
         }
       else if (fd != -1)
@@ -629,7 +621,7 @@ gs_file_open_in_tmpdir (GFile             *tmpdir,
   d = opendir (gs_file_get_path_cached (tmpdir));
   if (!d)
     {
-      _set_error_from_errno ("opendir", error);
+      gs_set_prefix_error_from_errno (error, errno, "opendir");
       goto out;
     }
   dfd = dirfd (d);
@@ -690,7 +682,7 @@ linkcopy_internal_attempt (GFile          *src,
         }
       else
         {
-          _set_error_from_errno ("link", error);
+          gs_set_prefix_error_from_errno (error, errno, "link");
           goto out;
         }
     }
@@ -737,9 +729,7 @@ linkcopy_internal (GFile          *src,
 
   if (lstat (gs_file_get_path_cached (src), &src_stat) == -1)
     {
-      int errsv = errno;
-      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errno),
-                           g_strerror (errsv));
+      gs_set_error_from_errno (error, errno);
       goto out;
     }
 
@@ -1050,7 +1040,7 @@ gs_file_rename (GFile          *from,
   if (rename (gs_file_get_path_cached (from),
               gs_file_get_path_cached (to)) < 0)
     {
-      _set_error_from_errno ("rename", error);
+      gs_set_prefix_error_from_errno (error, errno, "rename");
       return FALSE;
     }
   return TRUE;
@@ -1079,7 +1069,7 @@ gs_file_unlink (GFile          *path,
 
   if (unlink (gs_file_get_path_cached (path)) < 0)
     {
-      _set_error_from_errno ("unlink", error);
+      gs_set_prefix_error_from_errno (error, errno, "unlink");
       return FALSE;
     }
   return TRUE;
@@ -1108,7 +1098,7 @@ chown_internal (GFile          *path,
 
   if (res < 0)
     {
-      _set_error_from_errno ("chown", error);
+      gs_set_prefix_error_from_errno (error, errno, "chown");
       goto out;
     }
 
@@ -1190,7 +1180,7 @@ gs_file_chmod (GFile          *path,
 
   if (res < 0)
     {
-      _set_error_from_errno ("chmod", error);
+      gs_set_prefix_error_from_errno (error, errno, "chmod");
       goto out;
     }
 
@@ -1271,7 +1261,7 @@ gs_file_ensure_directory_mode (GFile         *dir,
 
   if (mkdir (gs_file_get_path_cached (dir), mode) == -1 && errno != EEXIST)
     {
-      _set_error_from_errno ("mkdir", error);
+      gs_set_prefix_error_from_errno (error, errno, "mkdir");
       return FALSE;
     }
   return TRUE;
@@ -1486,7 +1476,7 @@ read_xattr_name_array (const char *path,
       bytes_read = lgetxattr (path, p, NULL, 0);
       if (bytes_read < 0)
         {
-          _set_error_from_errno ("lgetxattr", error);
+          gs_set_prefix_error_from_errno (error, errno, "lgetxattr");
           goto out;
         }
       if (bytes_read == 0)
@@ -1497,7 +1487,7 @@ read_xattr_name_array (const char *path,
       if (lgetxattr (path, p, buf, bytes_read) < 0)
         {
           g_bytes_unref (bytes);
-          _set_error_from_errno ("lgetxattr", error);
+          gs_set_prefix_error_from_errno (error, errno, "lgetxattr");
           goto out;
         }
       
@@ -1539,7 +1529,7 @@ get_xattrs_impl (const char      *path,
     {
       if (errno != ENOTSUP)
         {
-          _set_error_from_errno ("llistxattr", error);
+          gs_set_prefix_error_from_errno (error, errno, "llistxattr");
           goto out;
         }
     }
@@ -1548,7 +1538,7 @@ get_xattrs_impl (const char      *path,
       xattr_names = g_malloc (bytes_read);
       if (llistxattr (path, xattr_names, bytes_read) < 0)
         {
-          _set_error_from_errno ("llistxattr", error);
+          gs_set_prefix_error_from_errno (error, errno, "llistxattr");
           goto out;
         }
       xattr_names_canonical = canonicalize_xattrs (xattr_names, bytes_read);
@@ -1671,7 +1661,7 @@ gs_fd_set_all_xattrs (int            fd,
       g_variant_unref (value);
       if (G_UNLIKELY (res == -1))
         {
-          _set_error_from_errno ("fsetxattr", error);
+          gs_set_prefix_error_from_errno (error, errno, "fsetxattr");
           goto out;
         }
     }
@@ -1711,7 +1701,7 @@ set_all_xattrs_for_path (const char    *path,
       g_clear_pointer (&value, (GDestroyNotify) g_variant_unref);
       if (loop_err)
         {
-          _set_error_from_errno ("lsetxattr", error);
+          gs_set_prefix_error_from_errno (error, errno, "lsetxattr");
           goto out;
         }
     }
@@ -1806,7 +1796,7 @@ gs_dirfd_iterator_init_take_fd (int dfd,
   d = fdopendir (dfd);
   if (!d)
     {
-      _set_error_from_errno ("fdopendir", error);
+      gs_set_prefix_error_from_errno (error, errno, "fdopendir");
       goto out;
     }
 
@@ -1836,7 +1826,7 @@ gs_dirfd_iterator_next_dent (GSDirFdIterator  *dfd_iter,
       *out_dent = readdir (real_dfd_iter->d);
       if (*out_dent == NULL && errno != 0)
         {
-          _set_error_from_errno ("fdopendir", error);
+          gs_set_prefix_error_from_errno (error, errno, "fdopendir");
           goto out;
         }
     } while (*out_dent &&

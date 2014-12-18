@@ -41,14 +41,6 @@ union dirent_storage {
                         ((NAME_MAX + 1 + sizeof(long)) & ~(sizeof(long) - 1))];
 };
 
-static inline void
-_set_error_from_errno (GError **error)
-{
-  int errsv = errno;
-  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                       g_strerror (errsv));
-}
-
 static gboolean
 copy_xattrs_from_file_to_fd (GFile         *src,
                              int            dest_fd,
@@ -111,7 +103,7 @@ cp_internal (GFile         *src,
   while (G_UNLIKELY (r == -1 && errno == EINTR));
   if (r == -1)
     {
-      _set_error_from_errno (error);
+      gs_set_error_from_errno (error, errno);
       goto out;
     }
 
@@ -128,7 +120,7 @@ cp_internal (GFile         *src,
       while (G_UNLIKELY (r == -1 && errno == EINTR));
       if (r == -1)
         {
-          _set_error_from_errno (error);
+          gs_set_error_from_errno (error, errno);
           goto out;
         }
 
@@ -190,9 +182,7 @@ cp_internal (GFile         *src,
                 {
                   if (!(errno == EMLINK || errno == EXDEV))
                     {
-                      int errsv = errno;
-                      g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                           g_strerror (errsv));
+                      gs_set_error_from_errno (error, errno);
                       goto out;
                     }
                   /* We failed to hardlink; fall back to copying all; this will
@@ -317,8 +307,7 @@ gs_shutil_rm_rf_children (GSDirFdIterator    *dfd_iter,
                 continue;
               else
                 {
-                  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                       g_strerror (errsv));
+                  gs_set_error_from_errno (error, errsv);
                   goto out;
                 }
             }
@@ -341,9 +330,7 @@ gs_shutil_rm_rf_children (GSDirFdIterator    *dfd_iter,
 
           if (unlinkat (dfd_iter->fd, dent->d_name, AT_REMOVEDIR) == -1)
             {
-              int errsv = errno;
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                   g_strerror (errsv));
+              gs_set_error_from_errno (error, errno);
               goto out;
             }
         }
@@ -351,11 +338,9 @@ gs_shutil_rm_rf_children (GSDirFdIterator    *dfd_iter,
         {
           if (unlinkat (dfd_iter->fd, dent->d_name, 0) == -1)
             {
-              int errsv = errno;
               if (errno != ENOENT)
                 {
-                  g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                       g_strerror (errsv));
+                  gs_set_error_from_errno (error, errno);
                   goto out;
                 }
             }
@@ -403,15 +388,13 @@ gs_shutil_rm_rf_at (int           dfd,
         {
           if (unlinkat (dfd, path, 0) != 0)
             {
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                   g_strerror (errsv));
+              gs_set_error_from_errno (error, errno);
               goto out;
             }
         }
       else
         {
-          g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               g_strerror (errsv));
+          gs_set_error_from_errno (error, errno);
           goto out;
         }
     }
@@ -429,8 +412,7 @@ gs_shutil_rm_rf_at (int           dfd,
           int errsv = errno;
           if (errsv != ENOENT)
             {
-              g_set_error_literal (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                                   g_strerror (errsv));
+              gs_set_error_from_errno (error, errno);
               goto out;
             }
         }
