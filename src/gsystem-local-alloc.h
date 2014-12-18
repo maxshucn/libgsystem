@@ -43,7 +43,6 @@ G_BEGIN_DECLS
  * 1) Take a pointer to the location (typically itself a pointer).
  * 2) Provide %NULL-safety where it doesn't exist already (e.g. g_object_unref)
  */
-GS_DEFINE_CLEANUP_FUNCTION0(GKeyFile*, gs_local_keyfile_unref, g_key_file_unref)
 
 /**
  * gs_free:
@@ -176,6 +175,14 @@ GS_DEFINE_CLEANUP_FUNCTION(char**, gs_local_strfreev, g_strfreev)
  */
 #define gs_free_error __attribute__ ((cleanup(gs_local_free_error)))
 GS_DEFINE_CLEANUP_FUNCTION0(GError*, gs_local_free_error, g_error_free)
+
+/**
+ * gs_unref_keyfile:
+ *
+ * Call g_key_file_unref() on a variable location when it goes out of scope.
+ */
+#define gs_unref_keyfile __attribute__ ((cleanup(gs_local_keyfile_unref)))
+GS_DEFINE_CLEANUP_FUNCTION0(GKeyFile*, gs_local_keyfile_unref, g_key_file_unref)
 
 G_END_DECLS
 
