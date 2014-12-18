@@ -25,6 +25,8 @@ test_localalloc (void)
   gs_strfreev char **strv = g_get_environ ();
   gs_free_error GError *err = g_error_new (G_IO_ERROR, G_IO_ERROR_FAILED, "oops %s", "darn!");
   gs_unref_keyfile GKeyFile *keyfile = g_key_file_new ();
+  gs_fd_close int fd = open ("/dev/null", O_RDONLY);
+  gs_fd_close int fd2 = -1;
 }
 
 int
