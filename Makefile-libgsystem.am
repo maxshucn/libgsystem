@@ -25,6 +25,7 @@ libgsystemheader_HEADERS = \
 	src/gsystem-glib-compat.h \
 	src/gsystem-shutil.h \
 	src/gsystem-log.h \
+	src/gsystem-errors.h \
 	src/gsystem-subprocess-context.h \
 	src/gsystem-subprocess.h \
 	src/libgsystem.h \
@@ -35,6 +36,7 @@ libgsystem_la_SOURCES = \
 	src/gsystem-console.c \
 	src/gsystem-file-utils.c \
 	src/gsystem-shutil.c \
+	src/gsystem-errors.c \
 	src/gsystem-log.c \
 	src/gsystem-subprocess-context-private.h \
 	src/gsystem-subprocess-context.c \

@@ -1,6 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*-
  *
- * Copyright (C) 2012,2013 Colin Walters <walters@verbum.org>.
+ * Copyright (C) 2014 Colin Walters <walters@verbum.org>.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,32 +18,19 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __LIBGSYSTEM__
-#define __LIBGSYSTEM__
+#ifndef __GSYSTEM_ERRORS_H__
+#define __GSYSTEM_ERRORS_H__
 
 #include <gio/gio.h>
+#include <sys/stat.h>
 
 G_BEGIN_DECLS
 
-#define gs_transfer_out_value(outp, srcp) G_STMT_START {   \
-  if (outp)                                                \
-    {                                                      \
-      *(outp) = *(srcp);                                   \
-      *(srcp) = NULL;                                      \
-    }                                                      \
-  } G_STMT_END;
-
-#include <gsystem-console.h>
-#include <gsystem-file-utils.h>
-#include <gsystem-shutil.h>
-#if GLIB_CHECK_VERSION(2,34,0)
-#include <gsystem-subprocess.h>
-#endif
-#include <gsystem-log.h>
-#include <gsystem-errors.h>
-#ifndef _GSYSTEM_NO_LOCAL_ALLOC
-#include <gsystem-local-alloc.h>
-#endif
+void gs_set_error_from_errno (GError **error, gint saved_errno);
+void gs_set_prefix_error_from_errno (GError     **error,
+                                     gint         errsv,
+                                     const char  *format,
+                                     ...) G_GNUC_PRINTF (3,4);
 
 G_END_DECLS
 
