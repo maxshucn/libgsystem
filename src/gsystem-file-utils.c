@@ -92,7 +92,7 @@ gs_file_openat_noatime (int            dfd,
 
 #ifdef O_NOATIME
   do
-    fd = openat (dfd, name, O_RDONLY | O_NOATIME, 0);
+    fd = openat (dfd, name, O_RDONLY | O_NOATIME | O_CLOEXEC, 0);
   while (G_UNLIKELY (fd == -1 && errno == EINTR));
   /* Only the owner or superuser may use O_NOATIME; so we may get
    * EPERM.  EINVAL may happen if the kernel is really old...
@@ -100,7 +100,7 @@ gs_file_openat_noatime (int            dfd,
   if (fd == -1 && (errno == EPERM || errno == EINVAL))
 #endif
     do
-      fd = openat (dfd, name, O_RDONLY, 0);
+      fd = openat (dfd, name, O_RDONLY | O_CLOEXEC, 0);
     while (G_UNLIKELY (fd == -1 && errno == EINTR));
   
   if (fd == -1)
@@ -562,7 +562,7 @@ gs_file_open_in_tmpdir_at (int                tmpdir_fd,
       tmp_name = gs_fileutil_gen_tmp_name (NULL, NULL);
 
       do
-        fd = openat (tmpdir_fd, tmp_name, O_WRONLY | O_CREAT | O_EXCL, mode);
+        fd = openat (tmpdir_fd, tmp_name, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
       while (fd == -1 && errno == EINTR);
       if (fd < 0 && errno != EEXIST)
         {
