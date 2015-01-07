@@ -1458,6 +1458,7 @@ variant_new_ay_bytes (GBytes *bytes)
 
 static gboolean
 read_xattr_name_array (const char *path,
+                       int         fd,
                        const char *xattrs,
                        size_t      len,
                        GVariantBuilder *builder,
@@ -1465,6 +1466,12 @@ read_xattr_name_array (const char *path,
 {
   gboolean ret = FALSE;
   const char *p;
+  int r;
+  const char *funcstr;
+
+  g_assert (path != NULL || fd != -1);
+
+  funcstr = fd != -1 ? "fgetxattr" : "lgetxattr";
 
   p = xattrs;
   while (p < xattrs+len)
@@ -1473,10 +1480,13 @@ read_xattr_name_array (const char *path,
       char *buf;
       GBytes *bytes = NULL;
 
-      bytes_read = lgetxattr (path, p, NULL, 0);
+      if (fd != -1)
+        bytes_read = fgetxattr (fd, p, NULL, 0);
+      else
+        bytes_read = lgetxattr (path, p, NULL, 0);
       if (bytes_read < 0)
         {
-          gs_set_prefix_error_from_errno (error, errno, "lgetxattr");
+          gs_set_prefix_error_from_errno (error, errno, "%s", funcstr);
           goto out;
         }
       if (bytes_read == 0)
@@ -1484,10 +1494,14 @@ read_xattr_name_array (const char *path,
 
       buf = g_malloc (bytes_read);
       bytes = g_bytes_new_take (buf, bytes_read);
-      if (lgetxattr (path, p, buf, bytes_read) < 0)
+      if (fd != -1)
+        r = fgetxattr (fd, p, buf, bytes_read);
+      else
+        r = lgetxattr (path, p, buf, bytes_read);
+      if (r < 0)
         {
           g_bytes_unref (bytes);
-          gs_set_prefix_error_from_errno (error, errno, "lgetxattr");
+          gs_set_prefix_error_from_errno (error, errno, "%s", funcstr);
           goto out;
         }
       
@@ -1543,7 +1557,7 @@ get_xattrs_impl (const char      *path,
         }
       xattr_names_canonical = canonicalize_xattrs (xattr_names, bytes_read);
       
-      if (!read_xattr_name_array (path, xattr_names_canonical, bytes_read, &builder, error))
+      if (!read_xattr_name_array (path, -1, xattr_names_canonical, bytes_read, &builder, error))
         goto out;
     }
 
@@ -1619,6 +1633,79 @@ gs_file_get_all_xattrs (GFile         *f,
 {
   return get_xattrs_impl (gs_file_get_path_cached (f), out_xattrs,
                           cancellable, error);
+}
+
+/**
+ * gs_fd_get_all_xattrs:
+ * @fd: a file descriptor
+ * @out_xattrs: (out): A new #GVariant containing the extended attributes
+ * @cancellable: Cancellable
+ * @error: Error
+ *
+ * Read all extended attributes from @fd in a canonical sorted order, and
+ * set @out_xattrs with the result.
+ *
+ * If the filesystem does not support extended attributes, @out_xattrs
+ * will have 0 elements, and this function will return successfully.
+ */
+gboolean
+gs_fd_get_all_xattrs (int            fd,
+                      GVariant     **out_xattrs,
+                      GCancellable  *cancellable,
+                      GError       **error)
+{
+#ifdef GSYSTEM_CONFIG_XATTRS
+  gboolean ret = FALSE;
+  ssize_t bytes_read;
+  char *xattr_names = NULL;
+  char *xattr_names_canonical = NULL;
+  GVariantBuilder builder;
+  gboolean builder_initialized = FALSE;
+  GVariant *ret_xattrs = NULL;
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(ayay)"));
+  builder_initialized = TRUE;
+
+  bytes_read = flistxattr (fd, NULL, 0);
+
+  if (bytes_read < 0)
+    {
+      if (errno != ENOTSUP)
+        {
+          gs_set_prefix_error_from_errno (error, errno, "flistxattr");
+          goto out;
+        }
+    }
+  else if (bytes_read > 0)
+    {
+      xattr_names = g_malloc (bytes_read);
+      if (flistxattr (fd, xattr_names, bytes_read) < 0)
+        {
+          gs_set_prefix_error_from_errno (error, errno, "flistxattr");
+          goto out;
+        }
+      xattr_names_canonical = canonicalize_xattrs (xattr_names, bytes_read);
+      
+      if (!read_xattr_name_array (NULL, fd, xattr_names_canonical, bytes_read, &builder, error))
+        goto out;
+    }
+
+  ret_xattrs = g_variant_builder_end (&builder);
+  builder_initialized = FALSE;
+  g_variant_ref_sink (ret_xattrs);
+  
+  ret = TRUE;
+  gs_transfer_out_value (out_xattrs, &ret_xattrs);
+ out:
+  g_clear_pointer (&xattr_names, g_free);
+  g_clear_pointer (&xattr_names_canonical, g_free);
+  g_clear_pointer (&ret_xattrs, g_variant_unref);
+  if (!builder_initialized)
+    g_variant_builder_clear (&builder);
+  return ret;
+#else
+  return TRUE;
+#endif
 }
 
 /**
