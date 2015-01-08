@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([libgsystem], [2014.3], [walters@verbum.org])
+AC_INIT([libgsystem], [2015.1], [walters@verbum.org])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([buildutil])
 AC_CONFIG_AUX_DIR([build-aux])
