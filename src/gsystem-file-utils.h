@@ -23,6 +23,7 @@
 
 #include <gio/gio.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 G_BEGIN_DECLS
 
