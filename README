@@ -1,4 +1,15 @@
-libgsystem is intended to be used as a git external for components
+Pending deprecation
+-------------------
+
+This library is pending deprecation and no new APIs will be
+added.  For more information, see:
+
+https://mail.gnome.org/archives/desktop-devel-list/2015-February/msg00120.html
+
+Old README
+----------
+
+libgsystem was intended to be used as a git external for components
 that depend on GLib, but accept a hard dependency on things which are
 difficult to do in GLib itself.  For example, the local-alloc API
 depends on GCC/clang.
