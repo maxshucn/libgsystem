@@ -16,7 +16,6 @@ installed_test_PROGRAMS =
 installed_test_SCRIPTS =
 nobase_installed_test_DATA =
 
-noinst_LTLIBRARIES =
 noinst_PROGRAMS =
 noinst_SCRIPTS =
 noinst_DATA =

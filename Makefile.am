@@ -31,5 +31,11 @@ if BUILDOPT_INTROSPECTION
 include $(INTROSPECTION_MAKEFILE)
 endif
 
+libglnx_srcpath := $(srcdir)/libglnx
+libglnx_cflags := $(BUILDDEP_GIO_UNIX_CFLAGS) -I$(libglnx_srcpath)
+libglnx_libs := $(BUILDDEP_GIO_UNIX_LIBS)
+
+noinst_LTLIBRARIES += libglnx.la
+include libglnx/Makefile-libglnx.am
 include Makefile-libgsystem.am
 include Makefile-tests.am

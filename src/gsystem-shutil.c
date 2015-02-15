@@ -25,14 +25,16 @@
 #define _GNU_SOURCE
 #endif
 
-#define _GSYSTEM_NO_LOCAL_ALLOC
-#include "libgsystem.h"
+#include <libglnx.h>
 #include "gsystem-glib-compat.h"
 #include <glib-unix.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fcntl.h>
+
+#define _GSYSTEM_NO_LOCAL_ALLOC
+#include "libgsystem.h"
 
 /* Taken from systemd/src/shared/util.h */
 union dirent_storage {
@@ -261,97 +263,6 @@ gs_shutil_cp_a (GFile         *src,
                       cancellable, error);
 }
 
-static unsigned char
-struct_stat_to_dt (struct stat *stbuf)
-{
-  if (S_ISDIR (stbuf->st_mode))
-    return DT_DIR;
-  if (S_ISREG (stbuf->st_mode))
-    return DT_REG;
-  if (S_ISCHR (stbuf->st_mode))
-    return DT_CHR;
-  if (S_ISBLK (stbuf->st_mode))
-    return DT_BLK;
-  if (S_ISFIFO (stbuf->st_mode))
-    return DT_FIFO;
-  if (S_ISLNK (stbuf->st_mode))
-    return DT_LNK;
-  if (S_ISSOCK (stbuf->st_mode))
-    return DT_SOCK;
-  return DT_UNKNOWN;
-}
-
-static gboolean
-gs_shutil_rm_rf_children (GSDirFdIterator    *dfd_iter,
-                          GCancellable       *cancellable,
-                          GError            **error)
-{
-  gboolean ret = FALSE;
-  struct dirent *dent;
-
-  while (TRUE)
-    {
-      if (!gs_dirfd_iterator_next_dent (dfd_iter, &dent, cancellable, error))
-        goto out;
-
-      if (dent == NULL)
-        break;
-
-      if (dent->d_type == DT_UNKNOWN)
-        {
-          struct stat stbuf;
-          if (fstatat (dfd_iter->fd, dent->d_name, &stbuf, AT_SYMLINK_NOFOLLOW) == -1)
-            {
-              int errsv = errno;
-              if (errsv == ENOENT)
-                continue;
-              else
-                {
-                  gs_set_error_from_errno (error, errsv);
-                  goto out;
-                }
-            }
-          dent->d_type = struct_stat_to_dt (&stbuf);
-          /* Assume unknown types are just treated like regular files */
-          if (dent->d_type == DT_UNKNOWN)
-            dent->d_type = DT_REG;
-        }
-
-      if (dent->d_type == DT_DIR)
-        {
-          gs_dirfd_iterator_cleanup GSDirFdIterator child_dfd_iter = { 0, };
-
-          if (!gs_dirfd_iterator_init_at (dfd_iter->fd, dent->d_name, FALSE,
-                                          &child_dfd_iter, error))
-            goto out;
-
-          if (!gs_shutil_rm_rf_children (&child_dfd_iter, cancellable, error))
-            goto out;
-
-          if (unlinkat (dfd_iter->fd, dent->d_name, AT_REMOVEDIR) == -1)
-            {
-              gs_set_error_from_errno (error, errno);
-              goto out;
-            }
-        }
-      else
-        {
-          if (unlinkat (dfd_iter->fd, dent->d_name, 0) == -1)
-            {
-              if (errno != ENOENT)
-                {
-                  gs_set_error_from_errno (error, errno);
-                  goto out;
-                }
-            }
-        }
-    }
-
-  ret = TRUE;
- out:
-  return ret;
-}
-
 /**
  * gs_shutil_rm_rf_at:
  * @dfd: A directory file descriptor, or -1 for current
@@ -369,59 +280,7 @@ gs_shutil_rm_rf_at (int           dfd,
                     GCancellable *cancellable,
                     GError      **error)
 {
-  gboolean ret = FALSE;
-  int target_dfd = -1;
-  gs_dirfd_iterator_cleanup GSDirFdIterator dfd_iter = { 0, };
-
-  /* With O_NOFOLLOW first */
-  target_dfd = openat (dfd, path,
-                       O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-
-  if (target_dfd == -1)
-    {
-      int errsv = errno;
-      if (errsv == ENOENT)
-        {
-          ;
-        }
-      else if (errsv == ENOTDIR || errsv == ELOOP)
-        {
-          if (unlinkat (dfd, path, 0) != 0)
-            {
-              gs_set_error_from_errno (error, errno);
-              goto out;
-            }
-        }
-      else
-        {
-          gs_set_error_from_errno (error, errno);
-          goto out;
-        }
-    }
-  else
-    {
-      if (!gs_dirfd_iterator_init_take_fd (target_dfd, &dfd_iter, error))
-        goto out;
-      target_dfd = -1;
-
-      if (!gs_shutil_rm_rf_children (&dfd_iter, cancellable, error))
-        goto out;
-
-      if (unlinkat (dfd, path, AT_REMOVEDIR) == -1)
-        {
-          int errsv = errno;
-          if (errsv != ENOENT)
-            {
-              gs_set_error_from_errno (error, errno);
-              goto out;
-            }
-        }
-    }
-
-  ret = TRUE;
- out:
-  if (target_dfd != -1) (void) close (target_dfd);
-  return ret;
+  return glnx_shutil_rm_rf_at (dfd, path, cancellable, error);
 }
 
 /**
