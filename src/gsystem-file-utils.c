@@ -1213,12 +1213,16 @@ gs_file_ensure_directory (GFile         *dir,
       if (with_parents &&
           g_error_matches (temp_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
         {
-          g_clear_error (&temp_error);
-
           parent = g_file_get_parent (dir);
           if (parent)
             {
-              if (!gs_file_ensure_directory (parent, TRUE, cancellable, error))
+              g_clear_error (&temp_error);
+
+              if (!glnx_shutil_mkdir_p_at (AT_FDCWD,
+                                           gs_file_get_path_cached (parent),
+                                           0777,
+                                           cancellable,
+                                           error))
                 goto out;
             }
           if (!gs_file_ensure_directory (dir, FALSE, cancellable, error))
