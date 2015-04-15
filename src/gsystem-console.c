@@ -348,6 +348,7 @@ gs_console_begin_status_line (GSConsole     *console,
 
   if (!console->in_status_line)
     {
+      /* See http://en.wikipedia.org/wiki/ANSI_escape_code, using the DEC codes */
       guint8 buf[3] = { (guint8)'\n', 0x1B, 0x37 };
       if (!g_output_stream_write_all (out, buf, sizeof (buf), &bytes_written,
                                       cancellable, error))
