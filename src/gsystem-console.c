@@ -346,9 +346,12 @@ gs_console_begin_status_line (GSConsole     *console,
 
   out = gs_console_get_stdout ();
 
+  /* This uses private DEC escape codes, defined at:
+   * http://vt100.net/docs/vt220-rm/chapter4.html#S4.7 */
+
   if (!console->in_status_line)
     {
-      /* See http://en.wikipedia.org/wiki/ANSI_escape_code, using the DEC codes */
+      /* Save Cursor (DECSC) - ESC 7 */
       guint8 buf[3] = { (guint8)'\n', 0x1B, 0x37 };
       if (!g_output_stream_write_all (out, buf, sizeof (buf), &bytes_written,
                                       cancellable, error))
@@ -358,6 +361,7 @@ gs_console_begin_status_line (GSConsole     *console,
     }
 
   {
+    /* Restore Cursor (DECRC) - ESC 8 */
     guint8 buf[2] = { 0x1B, 0x38 };
     if (!g_output_stream_write_all (out, buf, sizeof (buf), &bytes_written,
                                     cancellable, error))
