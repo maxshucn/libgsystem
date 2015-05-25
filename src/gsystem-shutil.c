@@ -182,7 +182,7 @@ cp_internal (GFile         *src,
             {
               if (link (gs_file_get_path_cached (src_child), gs_file_get_path_cached (dest_child)) == -1)
                 {
-                  if (!(errno == EMLINK || errno == EXDEV))
+                  if (!(errno == EMLINK || errno == EXDEV || errno == EPERM))
                     {
                       gs_set_error_from_errno (error, errno);
                       goto out;
