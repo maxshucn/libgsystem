@@ -30,6 +30,7 @@ LT_PREREQ([2.2.4])
 LT_INIT([disable-static])
 
 AC_CHECK_HEADER([attr/xattr.h],,[AC_MSG_ERROR([You must have attr/xattr.h from libattr])])
+AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([You must have sys/capability.h from libcap])])
 
 PKG_PROG_PKG_CONFIG
 
