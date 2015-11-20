@@ -28,7 +28,7 @@ G_BEGIN_DECLS
 
 void gs_set_error_from_errno (GError **error, gint saved_errno);
 void gs_set_prefix_error_from_errno (GError     **error,
-                                     gint         errsv,
+                                     gint         saved_errno,
                                      const char  *format,
                                      ...) G_GNUC_PRINTF (3,4);
 

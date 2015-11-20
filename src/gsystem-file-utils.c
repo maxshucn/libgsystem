@@ -485,7 +485,7 @@ gs_file_open_dir_fd_at (int            parent_dfd,
 /**
  * gs_opendirat_with_errno:
  * @dfd: File descriptor for origin directory
- * @name: Pathname, relative to @dfd
+ * @path: Pathname, relative to @dfd
  * @follow: Whether or not to follow symbolic links
  *
  * Use openat() to open a directory, using a standard set of flags.

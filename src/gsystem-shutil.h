@@ -38,7 +38,7 @@ gs_shutil_cp_a (GFile         *src,
                 GError       **error);
 
 gboolean
-gs_shutil_rm_rf_at (int            fd,
+gs_shutil_rm_rf_at (int            dfd,
                     const char    *path,
                     GCancellable  *cancellable,
                     GError       **error);
