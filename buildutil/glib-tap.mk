@@ -79,7 +79,7 @@ all_test_scripts      = $(test_scripts) $(uninstalled_test_scripts) $(installed_
 all_dist_test_scripts = $(dist_test_scripts) $(dist_uninstalled_test_scripts) $(dist_installed_test_scripts) \
                         $(dist_test_extra_scripts) $(dist_uninstalled_test_extra_scripts) $(dist_installed_test_extra_scripts)
 all_test_scripts     += $(all_dist_test_scripts)
-EXTRA_DIST           += $(all_dist_test_scripts)
+EXTRA_DIST           += $(all_dist_test_scripts) buildutil/tap-driver.sh buildutil/tap-test
 all_test_data         = $(test_data) $(uninstalled_test_data) $(installed_test_data)
 all_dist_test_data    = $(dist_test_data) $(dist_uninstalled_test_data) $(dist_installed_test_data)
 all_test_data        += $(all_dist_test_data)
